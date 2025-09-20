@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "cd llm_stuff && python search_api.py"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10

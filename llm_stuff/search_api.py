@@ -130,14 +130,15 @@ async def root():
     }
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))
     print("🚀 Starting RAG Search Engine API...")
-    print("📖 API Documentation: http://localhost:8000/docs")
-    print("🔍 Search Endpoint: http://localhost:8000/search")
-    print("💚 Health Check: http://localhost:8000/health")
+    print(f"📖 API Documentation: http://localhost:{port}/docs")
+    print(f"🔍 Search Endpoint: http://localhost:{port}/search")
+    print(f"💚 Health Check: http://localhost:{port}/health")
 
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
+        port=port,
         log_level="info"
     )

@@ -383,10 +383,10 @@ async def main():
     health = rag.health_check()
     if health["status"] != "healthy":
         logger.error(f"System health check failed: {health}")
-        print("❌ System is not ready. Check logs for details.")
+        print("System is not ready. Check logs for details.")
         return
 
-    logger.info("✅ System health check passed. Ready for queries.")
+    logger.info("System health check passed. Ready for queries.")
     print("🚀 Production Search Engine with RAG is ready!")
     print("Type 'exit' or 'quit' to stop.\n")
 
@@ -408,12 +408,12 @@ async def main():
 
                 # Display results in Google-style format
                 print(f"\n{'='*80}")
-                print(f"🔍 SEARCH RESULTS FOR: {result.query}")
+                print(f"SEARCH RESULTS FOR: {result.query}")
                 print(f"Found {result.total_results} results in {result.processing_time:.2f} seconds")
                 print(f"{'='*80}")
 
                 # Show search results
-                print("\n📊 SEARCH RESULTS:")
+                print("\nSEARCH RESULTS:")
                 for i, search_result in enumerate(result.search_results, 1):
                     print(f"\n{i}. {search_result.title}")
                     print(f"   🔗 {search_result.link}")
@@ -421,18 +421,18 @@ async def main():
 
                 # Show AI Overview
                 print(f"\n{'='*80}")
-                print("🤖 AI OVERVIEW")
+                print("AI OVERVIEW")
                 print(f"Confidence Score: {result.ai_overview.confidence_score:.1f}/1.0")
                 print(f"{'='*80}")
                 print(f"\n{result.ai_overview.summary}")
 
-                print(f"\n📋 KEY POINTS:")
+                print(f"\nKEY POINTS:")
                 for i, point in enumerate(result.ai_overview.key_points, 1):
                     print(f"{i}. {point}")
 
                 # Show sources
                 print(f"\n{'='*80}")
-                print("📚 SOURCES")
+                print("SOURCES")
                 print(f"{'='*80}")
                 for source in result.sources:
                     print(f"[{source.source_number}] {source.title}")
@@ -441,16 +441,16 @@ async def main():
 
             except Exception as e:
                 logger.error(f"Error processing search: {e}")
-                print("❌ Search processing failed. Please try again.")
+                print("Search processing failed. Please try again.")
 
         except KeyboardInterrupt:
             logger.info("User interrupted with Ctrl+C")
-            print("\n👋 Goodbye!")
+            print("\nGoodbye!")
             break
 
         except Exception as e:
             logger.error(f"Unexpected error in main loop: {e}")
-            print("❌ An unexpected error occurred. Please try again.")
+            print("An unexpected error occurred. Please try again.")
             continue
 
     logger.info("Search engine stopped")

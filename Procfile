@@ -1,0 +1,1 @@
+web: cd llm_stuff && python search_api.py

@@ -1,0 +1,39 @@
+# Core Dependencies for Railway Deployment
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+pydantic-ai>=0.0.13
+
+# Search and Crawling
+requests>=2.31.0
+crawl4ai>=0.3.0
+
+# LLM and AI
+openai>=1.0.0
+sentence-transformers>=2.7.0
+
+# Vector Database
+qdrant-client>=1.7.0
+
+# Environment and Configuration
+python-dotenv>=1.0.0
+
+# Data Processing
+numpy>=1.24.0
+torch>=2.0.0
+transformers>=4.30.0
+
+# HTTP and Async
+httpx>=0.25.0
+aiohttp>=3.9.0
+aiofiles>=23.2.1
+
+# Browser automation (for crawl4ai)
+playwright>=1.40.0
+
+# Type Hints and Validation
+typing-extensions>=4.8.0
+
+# Security
+certifi>=2023.7.22
+urllib3>=2.0.7
