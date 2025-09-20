@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["python39", "python39Packages.pip", "python39Packages.setuptools"]
+nixPkgs = ["python39", "python39Packages.pip", "python39Packages.setuptools", "bash"]
 
 [phases.install]
-cmds = ["python -m pip install --upgrade pip", "python -m pip install -r requirements.txt"]
+cmds = ["chmod +x build.sh", "./build.sh"]
 
 [phases.build]
 cmds = ["echo 'Build phase complete'"]
