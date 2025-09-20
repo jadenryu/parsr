@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Playfair_Display } from "next/font/google";
+import { Input } from "@/components/ui/input"; 
+import { Button } from "@/components/ui/button"; 
 
 const playfair = Playfair_Display({ subsets: ["latin"] });
 
@@ -19,14 +21,17 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
       <h1 className={`text-black text-5xl mb-6 ${playfair.className}`}>parsr</h1>
-      <form onSubmit={handleSubmit}>
-        <input
+      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-4">
+        <Input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search..."
-          className={`text-center w-2xl text-black border border-black p-2  transition duration-300 ease-in-out focus:outline-none ${playfair.className}`}
+          className={`w-96 ${playfair.className}`}
         />
+        <Button type="submit" variant="default">
+          Search
+        </Button>
       </form>
     </div>
   );
