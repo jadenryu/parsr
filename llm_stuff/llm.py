@@ -24,7 +24,7 @@ model = OpenAIModel(
 )
 
 # Define a very simple agent
-agent = Agent(model=model)
+agent = Agent(model=model, result_type = OutputModel)
 
 # Run the agent synchronously, conducting a conversation with the LLM.
 def main():
@@ -34,7 +34,7 @@ def main():
             break
         response = agent.run_sync(user_input)
         message_history = response.new_messages()
-        print(f"Agent: {response.data}")
+        print(f"Agent: {response.data.result}")
 if __name__ == "__main__":
     main()
 
