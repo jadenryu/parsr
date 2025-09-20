@@ -234,10 +234,10 @@ async def get_markdown_from_urls(urls: List[str]) -> List[str]:
                 return content
 
             except asyncio.TimeoutError:
-                logger.warning(f"Timeout crawling URL {index}: {url}")
+                logger.debug(f"Timeout crawling URL {index}: {url}")
                 return ""
             except Exception as e:
-                logger.warning(f"Error crawling URL {index} ({url}): {e}")
+                logger.debug(f"Error crawling URL {index} ({url}): {e}")
                 return ""
 
         try:
@@ -256,7 +256,7 @@ async def get_markdown_from_urls(urls: List[str]) -> List[str]:
                 markdown_contents = []
                 for i, result in enumerate(results):
                     if isinstance(result, Exception):
-                        logger.warning(f"Exception for URL {i}: {result}")
+                        logger.debug(f"Exception for URL {i}: {result}")
                         markdown_contents.append("")
                     else:
                         markdown_contents.append(result)

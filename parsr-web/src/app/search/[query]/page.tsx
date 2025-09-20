@@ -16,31 +16,22 @@ interface SearchResult {
   title: string;
   link: string;
   snippet: string;
-  position: number;
+  source_number: number;
 }
 
-interface SerperResponse {
-  organic: SearchResult[];
-  searchParameters: {
-    q: string;
-    type: string;
-    engine: string;
-  };
-  searchInformation: {
-    totalResults: string;
-    timeTaken: number;
-  };
-  answerBox?: {
-    answer: string;
-    title: string;
-    link: string;
-  };
-  knowledgeGraph?: {
-    title: string;
-    type: string;
-    description: string;
-    attributes: Record<string, string>;
-  };
+interface AIOverview {
+  summary: string;
+  key_points: string[];
+  confidence_score: number;
+}
+
+interface SearchResponse {
+  query: string;
+  search_results: SearchResult[];
+  ai_overview: AIOverview;
+  sources: SearchResult[];
+  total_results: number;
+  processing_time: number;
 }
 
 export default function SearchPage() {
@@ -48,7 +39,7 @@ export default function SearchPage() {
   const router = useRouter();
   const query = params.query as string;
 
-  const [results, setResults] = useState<SerperResponse | null>(null);
+  const [results, setResults] = useState<SearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,8 +59,17 @@ export default function SearchPage() {
         setError(null);
         
         const decodedQuery = decodeURIComponent(query);
-        const response = await fetch(`/api/search?q=${encodeURIComponent(decodedQuery)}`);
-        
+        const response = await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: decodedQuery,
+            max_results: 10
+          }),
+        });
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error);
@@ -120,68 +120,56 @@ export default function SearchPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <div className="mb-8">
             <h1 className="text-2xl font-bold mb-2">
-              Search Results for: {decodeURIComponent(query)}
+              Search Results for: {results.query}
             </h1>
             <div className="flex gap-2 text-sm text-muted-foreground">
               <Badge variant="secondary">
-                {results.searchInformation?.totalResults} results
+                {results.total_results} results
               </Badge>
               <Badge variant="outline">
-                {results.searchInformation?.timeTaken}s
+                {results.processing_time.toFixed(2)}s
+              </Badge>
+              <Badge variant="outline">
+                Confidence: {(results.ai_overview.confidence_score * 100).toFixed(0)}%
               </Badge>
             </div>
           </div>
 
-          {/* Answer Box */}
-          {results.answerBox && (
-            <Card className="mb-6 border-blue-200 bg-blue-50">
-              <CardHeader>
-                <CardTitle className="text-blue-900">
-                  {results.answerBox.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-blue-800 mb-2">{results.answerBox.answer}</p>
-                <a 
-                  href={results.answerBox.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline text-sm flex items-center gap-1"
-                >
-                  {results.answerBox.link}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </CardContent>
-            </Card>
-          )}
+          {/* AI Overview */}
+          <Card className="mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <CardHeader>
+              <CardTitle className="text-blue-900 flex items-center gap-2">
+                🤖 AI Overview
+                <Badge variant="outline" className="text-xs">
+                  Confidence: {(results.ai_overview.confidence_score * 100).toFixed(0)}%
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-blue max-w-none">
+                <p className="text-blue-800 leading-relaxed whitespace-pre-wrap">{results.ai_overview.summary}</p>
+              </div>
 
-          {/* Knowledge Graph */}
-          {results.knowledgeGraph && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>{results.knowledgeGraph.title}</CardTitle>
-                <CardDescription>{results.knowledgeGraph.type}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">{results.knowledgeGraph.description}</p>
-                
-                {results.knowledgeGraph.attributes && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {Object.entries(results.knowledgeGraph.attributes).map(([key, value]) => (
-                      <div key={key} className="flex">
-                        <span className="font-medium mr-2">{key}:</span>
-                        <span className="text-muted-foreground">{value}</span>
-                      </div>
+              {results.ai_overview.key_points && results.ai_overview.key_points.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">Key Points:</h4>
+                  <ul className="space-y-1">
+                    {results.ai_overview.key_points.map((point, index) => (
+                      <li key={index} className="text-blue-800 flex items-start gap-2">
+                        <span className="text-blue-600 font-bold mt-1">•</span>
+                        <span>{point}</span>
+                      </li>
                     ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          {/* Organic Results */}
-          <div className="space-y-4">
-            {results.organic?.map((result, index) => (
+          {/* Search Results */}
+          <div className="space-y-4 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Search Results</h2>
+            {results.search_results?.map((result, index) => (
               <Card key={index} className="hover:shadow-md transition-shadow">
                 <CardContent className="pt-6">
                   <a
@@ -190,27 +178,52 @@ export default function SearchPage() {
                     rel="noopener noreferrer"
                     className="block group"
                   >
-                    <h3 className="text-xl text-blue-600 hover:text-blue-800 group-hover:underline mb-1 flex items-center gap-2">
-                      {result.title}
-                      <ExternalLink className="h-4 w-4" />
-                    </h3>
-                    <p className="text-green-700 text-sm mb-2">{result.link}</p>
-                    <p className="text-muted-foreground leading-relaxed">{result.snippet}</p>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xs bg-gray-100 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center font-medium flex-shrink-0 mt-1">
+                        {result.source_number}
+                      </span>
+                      <div className="flex-1">
+                        <h3 className="text-xl text-blue-600 hover:text-blue-800 group-hover:underline mb-1 flex items-center gap-2">
+                          {result.title}
+                          <ExternalLink className="h-4 w-4" />
+                        </h3>
+                        <p className="text-green-700 text-sm mb-2">{result.link}</p>
+                        <p className="text-muted-foreground leading-relaxed">{result.snippet}</p>
+                      </div>
+                    </div>
                   </a>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {/* Raw Response (for debugging) */}
-          <Card className="mt-8">
+          {/* Sources */}
+          <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-sm">Raw API Response</CardTitle>
+              <CardTitle className="text-lg">📚 Sources</CardTitle>
+              <CardDescription>Referenced sources with citation numbers</CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="bg-muted p-4 rounded-lg overflow-auto text-xs">
-                {JSON.stringify(results, null, 2)}
-              </pre>
+              <div className="space-y-2">
+                {results.sources?.map((source) => (
+                  <div key={source.source_number} className="flex items-start gap-3 p-2 rounded-lg bg-gray-50">
+                    <span className="text-xs bg-gray-200 text-gray-700 rounded-full w-6 h-6 flex items-center justify-center font-medium flex-shrink-0">
+                      {source.source_number}
+                    </span>
+                    <div className="flex-1">
+                      <a
+                        href={source.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      >
+                        {source.title}
+                      </a>
+                      <p className="text-xs text-gray-600 mt-1">{source.link}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>

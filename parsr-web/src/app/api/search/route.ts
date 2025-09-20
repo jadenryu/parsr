@@ -1,49 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('q');
+    const body = await request.json();
+    const { query, max_results = 10 } = body;
 
     if (!query) {
       return NextResponse.json(
-        { error: 'Query parameter "q" is required' },
+        { error: 'Query is required' },
         { status: 400 }
       );
     }
 
-    const apiKey = process.env.SERPER_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'SERPER_API_KEY environment variable is not set' },
-        { status: 500 }
-      );
-    }
-    console.log(process.env.SERPER_API_KEY);
+    const fastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
 
-    const url = new URL('https://google.serper.dev/search');
-    url.searchParams.set('q', query);
-    url.searchParams.set('apiKey', apiKey);
-
-    const res = await fetch(url.toString(), {
-      method: 'GET',
-      redirect: 'follow', // mirrors curl -L
+    const response = await fetch(`${fastApiUrl}/search`, {
+      method: 'POST',
       headers: {
-        Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        query,
+        max_results
+      }),
       cache: 'no-store',
-      // next: { revalidate: 0 }, // optional
     });
 
-    if (!res.ok) {
-      const details = await res.text().catch(() => '');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { error: `Serper API responded with status: ${res.status}`, details },
-        { status: res.status }
+        { error: errorData.detail || `FastAPI responded with status: ${response.status}` },
+        { status: response.status }
       );
     }
 
-    const data = await res.json();
+    const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     console.error('Search API error:', error);
