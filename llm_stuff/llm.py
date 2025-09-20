@@ -1,42 +1,29 @@
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
 import logfire
-from pydantic import BaseModel
-import asyncio
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
-class OutputSchema(BaseModel):
-    data: str
-
 logfire.configure(
     token='pylf_v1_us_1WdVDM4q23QSyvwQ7yr9q6yvGtqrDZnkHK0Zy7Q6PBSf',
     console=False
 )
-
-# Define a model that uses OpenRouter
-api_key = os.getenv("GEMINI_API_KEY")
+# Define a model that uses OpenRouter with your API key
 model = OpenAIModel(
-    'gpt-4o-mini',
+    'gpt-5-mini',
     base_url='https://openrouter.ai/api/v1',
-    api_key=api_key)
+    api_key='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'
+)
 
 # Define a very simple agent
-agent = Agent(model=model, result_type=OutputSchema)
+agent = Agent(model=model)
 
-# Run the agent asynchronously, conducting a conversation with the LLM.
-
-async def main():
+# Run the agent synchronously, conducting a conversation with the LLM.
+def main():
     while True:
-        user_input = input("Enter your question")
-        result = agent.run(user_input)
-        print(result.data)
-        print("--------------------------------")
-        if user_input.strip().lower() in ["stop", "exit"]:
+        user_input = input("You: ")
+        if user_input.lower() in ['exit', 'quit']:
             break
-        message_history = result.new_messages()
+        response = agent.run_sync(user_input)
+        message_history = response.new_messages()
+        print(f"Agent: {response.data}")
 if __name__ == "__main__":
     main()
-
 
