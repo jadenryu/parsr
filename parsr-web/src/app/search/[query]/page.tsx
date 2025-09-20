@@ -9,6 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ExternalLink, AlertCircle } from 'lucide-react';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 
 const playfair = Playfair_Display({ subsets: ["latin"] });
 
@@ -56,11 +61,13 @@ export default function SearchPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    router.push(`search/${encodeURIComponent(searchQuery)}`);
+    router.push(`/search/${encodeURIComponent(searchQuery)}`);
   };
 
   useEffect(() => {
     if (!query) return;
+
+    let aborted = false;
 
     const fetchResults = async () => {
       try {
@@ -70,42 +77,69 @@ export default function SearchPage() {
         const decodedQuery = decodeURIComponent(query);
         const response = await fetch(`/api/search?q=${encodeURIComponent(decodedQuery)}`);
         
+        if (aborted) return;
+        
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error);
         }
 
         const data = await response.json();
-        setResults(data);
+        if (!aborted) {
+          setResults(data);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-        console.error('Search error:', err);
+        if (!aborted) {
+          setError(err instanceof Error ? err.message : 'An error occurred');
+          console.error('Search error:', err);
+        }
       } finally {
-        setLoading(false);
+        if (!aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchResults();
+
+    return () => {
+      aborted = true;
+    };
   }, [query]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-      <h1 className={`text-foreground text-5xl mb-6 ${playfair.className}`}>parsr</h1>
-      <form onSubmit={handleSubmit} className="mb-6 w-full max-w-lg flex gap-2">
-        <Input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search..."
-          className={`text-center ${playfair.className}`}
-        />
-        <Button type="submit" variant="outline">
-          Search
-        </Button>
-      </form>
+    <div className="min-h-screen bg-background">
+      <div className="flex flex-col items-center pt-8 pb-6 border-b">
+        <h1 className={`text-foreground justify-center text-5xl mb-6 ${playfair.className}`}>parsr</h1>
+        <form onSubmit={handleSubmit} className="mb-6 w-full max-w-lg flex gap-2">
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={`${decodeURIComponent(query)}`}
+            className={`text-center ${playfair.className}`}
+          />
+          <Button type="submit" variant="outline" className="flex items-center justify-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1116.65 16.65z"
+              />
+            </svg>
+          </Button>
+        </form>
+      </div>
 
       {loading ? (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center py-12">
           <Loader2 className="h-12 w-12 animate-spin" />
         </div>
       ) : error ? (
@@ -117,105 +151,102 @@ export default function SearchPage() {
           </Alert>
         </div>
       ) : results ? (
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold mb-2">
-              Search Results for: {decodeURIComponent(query)}
-            </h1>
-            <div className="flex gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">
-                {results.searchInformation?.totalResults} results
-              </Badge>
-              <Badge variant="outline">
-                {results.searchInformation?.timeTaken}s
-              </Badge>
-            </div>
-          </div>
-
-          {/* Answer Box */}
-          {results.answerBox && (
-            <Card className="mb-6 border-blue-200 bg-blue-50">
-              <CardHeader>
-                <CardTitle className="text-blue-900">
-                  {results.answerBox.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-blue-800 mb-2">{results.answerBox.answer}</p>
-                <a 
-                  href={results.answerBox.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline text-sm flex items-center gap-1"
-                >
-                  {results.answerBox.link}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Knowledge Graph */}
-          {results.knowledgeGraph && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>{results.knowledgeGraph.title}</CardTitle>
-                <CardDescription>{results.knowledgeGraph.type}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">{results.knowledgeGraph.description}</p>
-                
-                {results.knowledgeGraph.attributes && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {Object.entries(results.knowledgeGraph.attributes).map(([key, value]) => (
-                      <div key={key} className="flex">
-                        <span className="font-medium mr-2">{key}:</span>
-                        <span className="text-muted-foreground">{value}</span>
-                      </div>
-                    ))}
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="h-[calc(100vh-200px)]"
+        >
+          <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+            <div className="h-full border-r bg-muted/30 overflow-y-auto">
+              <div className="p-4">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold mb-2">
+                    Search Results for: {decodeURIComponent(query)}
+                  </h2>
+                  <div className="flex gap-2 text-sm text-muted-foreground">
+                    <Badge variant="secondary">
+                      {results.searchInformation?.totalResults} results
+                    </Badge>
+                    <Badge variant="outline">
+                      {results.searchInformation?.timeTaken}s
+                    </Badge>
                   </div>
+                </div>
+
+                {/* Answer Box */}
+                {results.answerBox && (
+                  <Card className="mb-4 border-blue-200 bg-blue-50">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-blue-900">
+                        {results.answerBox.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-blue-800 mb-2 text-xs">{results.answerBox.answer}</p>
+                      <a 
+                        href={results.answerBox.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-xs flex items-center gap-1"
+                      >
+                        Source
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </CardContent>
+                  </Card>
                 )}
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Organic Results */}
-          <div className="space-y-4">
-            {results.organic?.map((result, index) => (
-              <Card key={index} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <a
-                    href={result.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block group"
-                  >
-                    <h3 className="text-xl text-blue-600 hover:text-blue-800 group-hover:underline mb-1 flex items-center gap-2">
-                      {result.title}
-                      <ExternalLink className="h-4 w-4" />
-                    </h3>
-                    <p className="text-green-700 text-sm mb-2">{result.link}</p>
-                    <p className="text-muted-foreground leading-relaxed">{result.snippet}</p>
-                  </a>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                {/* Knowledge Graph */}
+                {results.knowledgeGraph && (
+                  <Card className="mb-4">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">{results.knowledgeGraph.title}</CardTitle>
+                      <CardDescription className="text-xs">{results.knowledgeGraph.type}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="mb-2 text-xs">{results.knowledgeGraph.description}</p>
+                    </CardContent>
+                  </Card>
+                )}
 
-          {/* Raw Response (for debugging) */}
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="text-sm">Raw API Response</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-muted p-4 rounded-lg overflow-auto text-xs">
-                {JSON.stringify(results, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        </div>
+                {/* Organic Results */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Web Results</h3>
+                  {results.organic?.map((result, index) => (
+                    <Card key={index} className="hover:shadow-sm transition-shadow cursor-pointer">
+                      <CardContent className="p-3">
+                        <a
+                          href={result.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block group"
+                        >
+                          <h4 className="text-sm text-blue-600 hover:text-blue-800 group-hover:underline mb-1 line-clamp-2">
+                            {result.title}
+                          </h4>
+                          <p className="text-green-700 text-xs mb-1 truncate">{result.link}</p>
+                          <p className="text-muted-foreground text-xs line-clamp-3">{result.snippet}</p>
+                        </a>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={70}>
+            <div className="flex items-center justify-center h-full text-muted-foreground p-8">
+              <div className="text-center">
+                <h3 className="text-2xl font-semibold mb-2">Content Area</h3>
+                <p>This space is reserved for future content</p>
+              </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       ) : (
-        <p className="text-muted-foreground">No results found.</p>
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">No results found.</p>
+        </div>
       )}
     </div>
   );
