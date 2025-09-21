@@ -58,14 +58,10 @@ class SearchContext:
     query: str
     combined_content: str
     rag_context: str = ""
-    sources_list: List[SearchResult] = None
+    sources_list: List[SearchResult] = Field(default_factory=list)
 
 api_key = os.getenv("OPENAI_API_KEY")
-model = OpenAIModel(
-    'gpt-4o-mini',
-    base_url='https://openrouter.ai/api/v1',
-    api_key=api_key
-)
+model = OpenAIModel('gpt-4o-mini')
 
 final_agent = Agent(
     model=model,

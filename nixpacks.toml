@@ -19,7 +19,7 @@ cmds = [
 cmds = ["echo 'Build phase complete'"]
 
 [start]
-cmd = "cd llm_stuff && python search_api.py"
+cmd = "python3 llm_stuff/search_api.py"
 
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.9"

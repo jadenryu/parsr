@@ -72,6 +72,7 @@ class ProductionRAGModule:
 
         except Exception as e:
             logger.error(f"Failed to initialize RAG module: {e}")
+            logger.error("RAG is a critical component - failing startup")
             raise
 
     def _test_connection(self):
