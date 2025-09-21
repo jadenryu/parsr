@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-// Times New Roman is a system font, no Google Fonts import needed
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -249,6 +248,7 @@ export default function SearchPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [query]);
+  
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -393,7 +393,7 @@ export default function SearchPage() {
                         {Array.from({ length: Math.min(5, Math.ceil(results.total_available / results.per_page)) }, (_, i) => {
                           const totalPages = Math.ceil(results.total_available / results.per_page);
                           let startPage = Math.max(1, currentPage - 2);
-                          let endPage = Math.min(totalPages, startPage + 4);
+                          const endPage = Math.min(totalPages, startPage + 4);
 
                           if (endPage - startPage < 4) {
                             startPage = Math.max(1, endPage - 4);
@@ -657,9 +657,9 @@ export default function SearchPage() {
                               </ReactMarkdown>
                             </div>
                           </div>
-
+                          
                           {/* Key Points */}
-                          {sourceSummaries[source.source_number]?.key_points && sourceSummaries[source.source_number]?.key_points.length > 0 && (
+                          {(sourceSummaries[source.source_number]?.key_points?.length ?? 0) > 0 && (
                             <div className="mb-6">
                               <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${timesNewRoman}`}>
                                 <div className="w-1.5 h-6 bg-stone-600 rounded-full"></div>
@@ -688,7 +688,7 @@ export default function SearchPage() {
                           )}
 
                           {/* Statistics */}
-                          {sourceSummaries[source.source_number]?.statistics && sourceSummaries[source.source_number]?.statistics.length > 0 && (
+                          {(sourceSummaries[source.source_number]?.statistics?.length ?? 0) > 0 && (
                             <div className="mb-6">
                               <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${timesNewRoman}`}>
                                 <div className="w-1.5 h-6 bg-emerald-600 rounded-full"></div>
