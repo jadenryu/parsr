@@ -2,6 +2,7 @@
 builder = "RAILPACK"
 
 [deploy]
-startCommand = "cd llm_stuff && python search_api.py"
+startCommand = "cd llm_stuff && python3 search_api.py"
+workingDirectory = "/app"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
