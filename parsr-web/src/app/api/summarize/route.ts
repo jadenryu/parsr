@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to the Python backend
-    const response = await fetch('http://localhost:8004/summarize', {
+    const fastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
+    const response = await fetch(`${fastApiUrl}/summarize`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
