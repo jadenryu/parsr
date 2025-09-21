@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Eye, Search } from 'lucide-react';
 import GlassIcons from '@/components/GlassIcons';
 import ReactMarkdown from 'react-markdown';
+
 import {
   ResizableHandle,
   ResizablePanel,
@@ -17,7 +18,7 @@ import {
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 // Times New Roman font family for all text
-const timesNewRoman = "font-['Times_New_Roman',serif]";
+const roboto = "ui-sans-serif, Roboto, system-ui, -apple-system, sans-serif";
 
 // Helper function to convert numbers to Roman numerals
 const toRomanNumeral = (num: number): string => {
@@ -269,7 +270,7 @@ export default function SearchPage() {
       <div className="backdrop-blur-sm border-b border-slate-200/60 sticky top-0 z-50">
         <div className="flex flex-col items-center pt-6 pb-4">
           <div className="flex items-center gap-4 mb-4">
-            <h1 className={`text-slate-800 text-4xl font-light tracking-tight ${timesNewRoman}`}>
+            <h1 className="text-slate-800 text-4xl font-light tracking-tight" style={{ fontFamily: 'Times New Roman, serif' }}>
               parsr
             </h1>
             <div className="flex gap-2">
@@ -292,7 +293,7 @@ export default function SearchPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`${decodeURIComponent(query)}`}
-                className={`h-12 text-center bg-white/70 border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-stone-500/20 focus:border-stone-400 ${timesNewRoman}`}
+                className={`h-12 text-center bg-white/70 border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-stone-500/20 focus:border-stone-400 ${roboto}`}
               />
             </div>
           </form>
@@ -331,17 +332,17 @@ export default function SearchPage() {
             <div className="h-full border-r border-slate-200/60 backdrop-blur-sm overflow-y-auto">
               <div className="p-6">
                 <div className="mb-6">
-                  <h2 className={`text-xl font-semibold text-slate-800 mb-3 ${timesNewRoman}`}>
+                  <h2 className={`text-xl font-semibold text-slate-800 mb-3 ${roboto}`}>
                     Search Results
                   </h2>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <span className={`px-3 py-1.5 bg-stone-100 text-stone-700 rounded-full font-medium ${timesNewRoman}`}>
+                    <span className={`px-3 py-1.5 bg-stone-100 text-stone-700 rounded-full font-medium ${roboto}`}>
                       {results.total_results} results
                     </span>
-                    <span className={`px-3 py-1.5 bg-green-100 text-green-700 rounded-full font-medium ${timesNewRoman}`}>
+                    <span className={`px-3 py-1.5 bg-green-100 text-green-700 rounded-full font-medium ${roboto}`}>
                       {results.processing_time.toFixed(1)}s
                     </span>
-                    <span className={`px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full font-medium ${timesNewRoman}`}>
+                    <span className={`px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full font-medium ${roboto}`}>
                       {(results.ai_overview.confidence_score * 100).toFixed(0)}% confidence
                     </span>
                   </div>
@@ -349,7 +350,7 @@ export default function SearchPage() {
 
                 {/* Search Results */}
                 <div className="space-y-4">
-                  <h3 className={`text-sm font-medium text-slate-600 uppercase tracking-wide ${timesNewRoman}`}>Web Results</h3>
+                  <h3 className={`text-sm font-medium text-slate-600 uppercase tracking-wide ${roboto}`}>Web Results</h3>
                   {results.search_results?.map((result, index) => (
                     <div key={index} className="group relative">
                       <div className="bg-white rounded-xl border border-slate-200/60 hover:border-stone-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
@@ -364,11 +365,11 @@ export default function SearchPage() {
                               {toRomanNumeral(result.source_number)}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className={`text-sm font-medium text-slate-900 group-hover:text-stone-600 mb-1 line-clamp-2 transition-colors ${timesNewRoman}`}>
+                              <h4 className={`text-sm font-medium text-slate-900 group-hover:text-stone-600 mb-1 line-clamp-2 transition-colors ${roboto}`}>
                                 {result.title}
                               </h4>
-                              <p className={`text-xs text-emerald-600 mb-2 truncate ${timesNewRoman}`}>{result.link}</p>
-                              <p className={`text-xs text-slate-600 line-clamp-3 leading-relaxed ${timesNewRoman}`}>{result.snippet}</p>
+                              <p className={`text-xs text-emerald-600 mb-2 truncate ${roboto}`}>{result.link}</p>
+                              <p className={`text-xs text-slate-600 line-clamp-3 leading-relaxed ${roboto}`}>{result.snippet}</p>
                             </div>
                           </div>
                         </a>
@@ -381,10 +382,10 @@ export default function SearchPage() {
                 {results && results.total_available > results.per_page && (
                   <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">
                     <div className="flex items-center gap-2">
-                      <p className={`text-sm text-slate-600 ${timesNewRoman}`}>
+                      <p className={`text-sm text-slate-600 ${roboto}`}>
                         Page {results.current_page} of {Math.ceil(results.total_available / results.per_page)}
                       </p>
-                      <span className={`text-xs text-slate-500 ${timesNewRoman}`}>
+                      <span className={`text-xs text-slate-500 ${roboto}`}>
                         ({results.total_results} of {results.total_available} results)
                       </span>
                     </div>
@@ -396,7 +397,7 @@ export default function SearchPage() {
                         size="sm"
                         onClick={() => setCurrentPage(currentPage - 1)}
                         disabled={currentPage <= 1 || loading}
-                        className={`${timesNewRoman} text-xs px-3 py-1.5`}
+                        className={`${roboto} text-xs px-3 py-1.5`}
                       >
                         Previous
                       </Button>
@@ -421,7 +422,7 @@ export default function SearchPage() {
                                 size="sm"
                                 onClick={() => setCurrentPage(pageNum)}
                                 disabled={loading}
-                                className={`${timesNewRoman} text-xs px-2 py-1.5 min-w-[32px]`}
+                                className={`${roboto} text-xs px-2 py-1.5 min-w-[32px]`}
                               >
                                 {pageNum}
                               </Button>
@@ -437,7 +438,7 @@ export default function SearchPage() {
                         size="sm"
                         onClick={() => setCurrentPage(currentPage + 1)}
                         disabled={!results.has_next_page || loading}
-                        className={`${timesNewRoman} text-xs px-3 py-1.5`}
+                        className={`${roboto} text-xs px-3 py-1.5`}
                       >
                         Next
                       </Button>
@@ -455,7 +456,7 @@ export default function SearchPage() {
                   <div className="flex items-center gap-0 p-1 overflow-x-auto scrollbar-hide">
                     <button
                       onClick={() => setActiveTab("overview")}
-                      className={`relative px-4 py-3 text-sm font-medium transition-all duration-300 whitespace-nowrap ${timesNewRoman} ${
+                      className={`relative px-4 py-3 text-sm font-medium transition-all duration-300 whitespace-nowrap ${roboto} ${
                         activeTab === "overview"
                           ? "text-slate-900"
                           : "text-slate-500 hover:text-slate-700"
@@ -470,7 +471,7 @@ export default function SearchPage() {
                       <div key={source.source_number} className="flex items-center group">
                         <button
                           onClick={() => setActiveTab(`source-${source.source_number}`)}
-                          className={`relative flex items-center gap-2 px-3 py-3 text-sm font-medium transition-all duration-300 max-w-[140px] ${timesNewRoman} ${
+                          className={`relative flex items-center gap-2 px-3 py-3 text-sm font-medium transition-all duration-300 max-w-[140px] ${roboto} ${
                             activeTab === `source-${source.source_number}`
                               ? "text-slate-900"
                               : "text-slate-500 hover:text-slate-700"
@@ -515,7 +516,7 @@ export default function SearchPage() {
                               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                             </svg>
                           </div>
-                          <h3 className={`text-xl font-semibold text-stone-800 ${timesNewRoman}`}>AI Overview</h3>
+                          <h3 className={`text-xl font-semibold text-stone-800 ${roboto}`}>AI Overview</h3>
                         </div>
                         <div className="px-3 py-1 bg-stone-100 rounded-full text-sm font-medium text-stone-700">
                           {(results.ai_overview.confidence_score * 100).toFixed(0)}% confidence
@@ -525,7 +526,7 @@ export default function SearchPage() {
 
                     <div className="p-6">
                       <div className="prose prose-slate max-w-none">
-                        <div className={`text-slate-700 leading-relaxed text-[15px] font-light ${timesNewRoman}`}>
+                        <div className={`text-slate-700 leading-relaxed text-[15px] font-light ${roboto}`}>
                           <ReactMarkdown
                             components={{
                               p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
@@ -540,7 +541,7 @@ export default function SearchPage() {
 
                       {results.ai_overview.key_points && results.ai_overview.key_points.length > 0 && (
                         <div className="mt-6 pt-6 border-t border-stone-100">
-                          <h4 className={`font-semibold text-slate-800 mb-4 flex items-center gap-2 ${timesNewRoman}`}>
+                          <h4 className={`font-semibold text-slate-800 mb-4 flex items-center gap-2 ${roboto}`}>
                             <div className="w-1.5 h-6 bg-stone-600 rounded-full"></div>
                             Key Insights
                           </h4>
@@ -550,7 +551,7 @@ export default function SearchPage() {
                                 <div className="w-6 h-6 bg-stone-600 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
                                   {toRomanNumeral(index + 1)}
                                 </div>
-                                <div className={`text-slate-700 text-sm leading-relaxed ${timesNewRoman}`}>
+                                <div className={`text-slate-700 text-sm leading-relaxed ${roboto}`}>
                                   <ReactMarkdown
                                     components={{
                                       p: ({ children }) => <p className="mb-0">{children}</p>,
@@ -577,8 +578,8 @@ export default function SearchPage() {
                       </svg>
                     </div>
                     <div>
-                      <h3 className={`text-xl font-semibold ${timesNewRoman}`}>Sources</h3>
-                      <p className={`text-white/70 text-sm ${timesNewRoman}`}>Referenced sources with citation numbers</p>
+                      <h3 className={`text-xl font-semibold ${roboto}`}>Sources</h3>
+                      <p className={`text-white/70 text-sm ${roboto}`}>Referenced sources with citation numbers</p>
                     </div>
                   </div>
                 </div>
@@ -590,17 +591,17 @@ export default function SearchPage() {
                           {toRomanNumeral(source.source_number)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className={`text-sm font-semibold text-slate-800 mb-2 line-clamp-2 group-hover:text-slate-900 ${timesNewRoman}`}>
+                          <h4 className={`text-sm font-semibold text-slate-800 mb-2 line-clamp-2 group-hover:text-slate-900 ${roboto}`}>
                             {source.title}
                           </h4>
-                          <p className={`text-xs text-slate-600 mb-3 line-clamp-2 leading-relaxed ${timesNewRoman}`}>
+                          <p className={`text-xs text-slate-600 mb-3 line-clamp-2 leading-relaxed ${roboto}`}>
                             {source.snippet}
                           </p>
                           <a
                             href={source.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`text-xs text-slate-500 hover:text-stone-600 transition-colors duration-200 truncate block ${timesNewRoman}`}
+                            className={`text-xs text-slate-500 hover:text-stone-600 transition-colors duration-200 truncate block ${roboto}`}
                           >
                             {source.link}
                           </a>
@@ -638,28 +639,28 @@ export default function SearchPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className={`prose max-w-none ${timesNewRoman}`}>
+                    <div className={`prose max-w-none ${roboto}`}>
                       {loadingSummaries[source.source_number] ? (
                         <div className="flex flex-col items-center justify-center py-8">
                           <div className="w-8 h-8 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin mb-4"></div>
-                          <p className={`text-slate-600 ${timesNewRoman}`}>Generating comprehensive summary...</p>
+                          <p className={`text-slate-600 ${roboto}`}>Generating comprehensive summary...</p>
                         </div>
                       ) : sourceSummaries[source.source_number] ? (
                         <div>
                           {/* Content Type and Confidence */}
                           <div className="flex items-center justify-between mb-4 p-3 bg-stone-50 rounded-lg">
-                            <span className={`text-sm font-medium text-stone-700 ${timesNewRoman}`}>
+                            <span className={`text-sm font-medium text-stone-700 ${roboto}`}>
                               📄 {sourceSummaries[source.source_number]?.content_type}
                             </span>
-                            <span className={`text-xs text-stone-600 ${timesNewRoman}`}>
+                            <span className={`text-xs text-stone-600 ${roboto}`}>
                               {Math.round((sourceSummaries[source.source_number]?.confidence_score || 0) * 100)}% confidence
                             </span>
                           </div>
 
                           {/* Main Summary */}
                           <div className="mb-6">
-                            <h3 className={`text-lg font-semibold text-slate-800 mb-3 ${timesNewRoman}`}>Summary</h3>
-                            <div className={`text-slate-700 leading-relaxed ${timesNewRoman}`}>
+                            <h3 className={`text-lg font-semibold text-slate-800 mb-3 ${roboto}`}>Summary</h3>
+                            <div className={`text-slate-700 leading-relaxed ${roboto}`}>
                               <ReactMarkdown
                                 components={{
                                   p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
@@ -674,7 +675,7 @@ export default function SearchPage() {
                           {/* Key Points */}
                           {(sourceSummaries[source.source_number]?.key_points?.length ?? 0) > 0 && (
                             <div className="mb-6">
-                              <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${timesNewRoman}`}>
+                              <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${roboto}`}>
                                 <div className="w-1.5 h-6 bg-stone-600 rounded-full"></div>
                                 Key Points
                               </h4>
@@ -684,7 +685,7 @@ export default function SearchPage() {
                                     <div className="w-6 h-6 bg-stone-600 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
                                       {toRomanNumeral(index + 1)}
                                     </div>
-                                    <div className={`text-slate-700 text-sm leading-relaxed ${timesNewRoman}`}>
+                                    <div className={`text-slate-700 text-sm leading-relaxed ${roboto}`}>
                                       <ReactMarkdown
                                         components={{
                                           p: ({ children }) => <p className="mb-0">{children}</p>,
@@ -703,7 +704,7 @@ export default function SearchPage() {
                           {/* Statistics */}
                           {(sourceSummaries[source.source_number]?.statistics?.length ?? 0) > 0 && (
                             <div className="mb-6">
-                              <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${timesNewRoman}`}>
+                              <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${roboto}`}>
                                 <div className="w-1.5 h-6 bg-emerald-600 rounded-full"></div>
                                 Statistics from Source
                               </h4>
@@ -714,9 +715,9 @@ export default function SearchPage() {
                                       <div className="text-xl font-bold text-emerald-800">
                                         {stat.value}{stat.unit && <span className="text-base">{stat.unit}</span>}
                                       </div>
-                                      <span className={`text-xs text-emerald-600 ${timesNewRoman}`}>{stat.source_citation}</span>
+                                      <span className={`text-xs text-emerald-600 ${roboto}`}>{stat.source_citation}</span>
                                     </div>
-                                    <p className={`text-sm text-emerald-700 leading-relaxed ${timesNewRoman}`}>{stat.context}</p>
+                                    <p className={`text-sm text-emerald-700 leading-relaxed ${roboto}`}>{stat.context}</p>
                                   </div>
                                 ))}
                               </div>
@@ -725,8 +726,8 @@ export default function SearchPage() {
 
                           {/* Relevance */}
                           <div className="mb-6">
-                            <h4 className={`font-semibold text-slate-800 mb-3 ${timesNewRoman}`}>Relevance to Query</h4>
-                            <p className={`text-slate-700 text-sm leading-relaxed ${timesNewRoman}`}>
+                            <h4 className={`font-semibold text-slate-800 mb-3 ${roboto}`}>Relevance to Query</h4>
+                            <p className={`text-slate-700 text-sm leading-relaxed ${roboto}`}>
                               {sourceSummaries[source.source_number]?.relevance_to_query}
                             </p>
                           </div>
@@ -737,7 +738,7 @@ export default function SearchPage() {
                               href={source.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`text-stone-600 hover:text-stone-800 hover:underline text-sm transition-colors ${timesNewRoman}`}
+                              className={`text-stone-600 hover:text-stone-800 hover:underline text-sm transition-colors ${roboto}`}
                             >
                               🔗 View Original Source
                             </a>
@@ -745,7 +746,7 @@ export default function SearchPage() {
                         </div>
                       ) : (
                         <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                          <p className={`text-sm text-red-800 ${timesNewRoman}`}>
+                          <p className={`text-sm text-red-800 ${roboto}`}>
                             <strong>Error:</strong> Could not generate summary for this source. Please try again later.
                           </p>
                         </div>
