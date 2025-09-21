@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const fastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
+    console.log(`Attempting to connect to FastAPI at: ${fastApiUrl}`);
 
     const response = await fetch(`${fastApiUrl}/search`, {
       method: 'POST',
@@ -30,18 +31,43 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error(`FastAPI error - Status: ${response.status}, URL: ${fastApiUrl}/search`, errorData);
       return NextResponse.json(
-        { error: errorData.detail || `FastAPI responded with status: ${response.status}` },
+        {
+          error: errorData.detail || `FastAPI responded with status: ${response.status}`,
+          fastApiUrl: fastApiUrl,
+          timestamp: new Date().toISOString()
+        },
         { status: response.status }
       );
     }
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Search API error:', error);
+
+    // Provide specific error messages for common connection issues
+    let errorMessage = 'Failed to fetch search results';
+    let debugInfo: any = {
+      fastApiUrl: process.env.FASTAPI_URL || 'http://localhost:8000',
+      timestamp: new Date().toISOString()
+    };
+
+    if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Cannot connect to FastAPI backend. Please ensure it is running.';
+      debugInfo.suggestion = 'Check if your FastAPI server is running and accessible at the configured URL';
+    } else if (error.name === 'TypeError' && error.message.includes('fetch failed')) {
+      errorMessage = 'Network error connecting to backend';
+      debugInfo.suggestion = 'Verify the FASTAPI_URL environment variable is correct';
+    }
+
     return NextResponse.json(
-      { error: 'Failed to fetch search results' },
+      {
+        error: errorMessage,
+        debug: debugInfo,
+        originalError: error.message
+      },
       { status: 500 }
     );
   }
