@@ -12,9 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import our search engine
-from serper import process_search_query, SearchResponse, rag
+from serper import process_search_query, SearchResponse, rag, summarize_source, SourceSummary
 import logging
 
 # Setup logging
@@ -39,7 +43,13 @@ app.add_middleware(
 
 class SearchRequest(BaseModel):
     query: str
-    max_results: Optional[int] = 10
+    max_results: Optional[int] = 20
+    page: Optional[int] = 1
+    per_page: Optional[int] = 20
+
+class SourceSummaryRequest(BaseModel):
+    source_url: str
+    original_query: str
 
 class HealthResponse(BaseModel):
     status: str
@@ -83,18 +93,16 @@ async def search(request: SearchRequest):
                 detail="Query must be at least 2 characters long"
             )
 
-        logger.info(f"Processing search query: {request.query}")
+        logger.info(f"Processing search query: {request.query} (page {request.page}/{request.per_page} per page)")
 
-        # Process the search query
-        result = await process_search_query(request.query)
+        # Process the search query with pagination parameters
+        result = await process_search_query(
+            query=request.query,
+            page=request.page or 1,
+            per_page=request.per_page or 20
+        )
 
-        # Limit results if requested
-        if request.max_results and request.max_results < len(result.search_results):
-            result.search_results = result.search_results[:request.max_results]
-            result.sources = result.sources[:request.max_results]
-            result.total_results = request.max_results
-
-        logger.info(f"Successfully processed search query: {request.query}")
+        logger.info(f"Successfully processed search query: {request.query} - {result.total_results} results on page {result.current_page}")
         return result
 
     except ValueError as e:
@@ -108,6 +116,51 @@ async def search(request: SearchRequest):
             detail=f"Search processing failed: {str(e)}"
         )
 
+@app.post("/summarize", response_model=SourceSummary)
+async def summarize_source_endpoint(request: SourceSummaryRequest):
+    """
+    Generate comprehensive summary for a specific source
+
+    Returns:
+    - summary: Detailed analysis of the source content
+    - key_points: Main insights from the source
+    - statistics: Numerical data found in the source
+    - relevance_to_query: How the source relates to the original query
+    - confidence_score: Quality assessment of the summary
+    - content_type: Type of source content
+    """
+    try:
+        if not request.source_url or len(request.source_url.strip()) < 10:
+            raise HTTPException(
+                status_code=400,
+                detail="Source URL must be provided and valid"
+            )
+
+        if not request.original_query or len(request.original_query.strip()) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Original query must be at least 2 characters long"
+            )
+
+        logger.info(f"Processing source summary for: {request.source_url}")
+
+        # Generate source summary
+        summary = await summarize_source(request.source_url, request.original_query)
+
+        logger.info(f"Successfully processed source summary for: {request.source_url}")
+        return summary
+
+    except ValueError as e:
+        logger.error(f"Source summarization validation error: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+
+    except Exception as e:
+        logger.error(f"Source summarization error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Source summarization failed: {str(e)}"
+        )
+
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
@@ -116,6 +169,7 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "search": "/search (POST)",
+            "summarize": "/summarize (POST)",
             "health": "/health (GET)",
             "docs": "/docs (GET)"
         },

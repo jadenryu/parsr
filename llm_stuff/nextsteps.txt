@@ -1,11 +1,7 @@
-i want to implement rag within my search engine for the summarizer.
+in the ai overview summary, please make it extremely detailed with more statistics when applicable. it should
+be at least three paragraphs in length for a query, and even longer depdneding on the technicalities of the query. 
 
-first, i will use qdrant for the vector database. i need to also use a sentence transformer to embed the soruces.
-
-here is how the workflow goes. 
-the user asks a query and it is transformed into a vector, which is then queried into the vector db to retrieve semantically
-relevant results. using rag, i want to incorporate the text in vectors returned in my ai summary. however, i only 
-want research papers in my vector db to ensure non bias and improved accuracy. 
-
-i realize i need to also need api keys and manual information to make this happen. can you let me know about
-the next steps in text form?
+also, can you develop the system prompt to also be very tailored toward this application? it should be understood by 
+the agent so it fully understands what type of ifnormation should be pulled on the prompt. ensure that the 
+system prompt is so detailed that it can answer basically any query and create lengthy, descriptive, non-redundant
+sumamries for most queries. 

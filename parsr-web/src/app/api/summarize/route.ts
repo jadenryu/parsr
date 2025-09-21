@@ -3,35 +3,32 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { query, max_results = 20, page = 1, per_page = 20 } = body;
+    const { source_url, original_query } = body;
 
-    if (!query) {
+    if (!source_url || !original_query) {
       return NextResponse.json(
-        { error: 'Query is required' },
+        { error: 'source_url and original_query are required' },
         { status: 400 }
       );
     }
 
+    // Forward the request to the Python backend
     const fastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
-
-    const response = await fetch(`${fastApiUrl}/search`, {
+    const response = await fetch(`${fastApiUrl}/summarize`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query,
-        max_results,
-        page,
-        per_page
+        source_url,
+        original_query,
       }),
-      cache: 'no-store',
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = await response.text();
       return NextResponse.json(
-        { error: errorData.detail || `FastAPI responded with status: ${response.status}` },
+        { error: `Backend error: ${errorData}` },
         { status: response.status }
       );
     }
@@ -39,9 +36,9 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Search API error:', error);
+    console.error('API route error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch search results' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

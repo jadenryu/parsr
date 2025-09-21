@@ -1,14 +1,14 @@
 import requests
 import json
 import asyncio
-from crawl4ai import *
+from crawl4ai import AsyncWebCrawler, BrowserConfig
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic import BaseModel, Field
 import os
 from dotenv import load_dotenv
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional, Union
 from qdrant_client import QdrantClient
 from production_rag import ProductionRAGModule
 import logging
@@ -40,10 +40,36 @@ class SearchResult(BaseModel):
     snippet: str = Field(description="Brief description/snippet from the search result")
     source_number: int = Field(description="Reference number for citations")
 
+class Statistic(BaseModel):
+    value: Union[float, int, str] = Field(description="The statistical value (number, percentage, or descriptive value)")
+    unit: Optional[str] = Field(default=None, description="Unit of measurement (%, years, cases, etc.)")
+    context: str = Field(description="Brief context explaining what this statistic represents")
+    source_citation: str = Field(description="Citation in [1], [2] format referencing the source")
+    confidence: float = Field(description="Confidence in this statistic", ge=0, le=1)
+
+class KeyFinding(BaseModel):
+    finding: str = Field(description="The key finding or insight")
+    category: str = Field(description="Category of finding (e.g., 'Clinical Trial Result', 'Market Analysis', 'Research Outcome')")
+    significance: str = Field(description="Why this finding is significant or important")
+    supporting_evidence: str = Field(description="Evidence supporting this finding with citations")
+    limitations: Optional[str] = Field(default=None, description="Any limitations or caveats to this finding")
+
+class ResearchQuality(BaseModel):
+    source_types: List[str] = Field(description="Types of sources found (e.g., 'peer-reviewed', 'government report', 'news article')")
+    academic_paper_count: int = Field(description="Number of academic/research papers found")
+    publication_years: List[int] = Field(description="Years of publication for academic sources")
+    study_methodologies: List[str] = Field(description="Research methodologies identified in sources")
+    sample_sizes: List[str] = Field(description="Sample sizes mentioned in studies")
+
 class AIOverview(BaseModel):
     summary: str = Field(description="Comprehensive summary with in-text citations using [1], [2] format")
     key_points: List[str] = Field(description="Main points with citations")
+    statistics: List[Statistic] = Field(description="Extracted statistics and numerical findings")
+    key_findings: List[KeyFinding] = Field(description="Important research findings and insights")
+    research_quality: ResearchQuality = Field(description="Assessment of research quality and source types")
     confidence_score: float = Field(description="Confidence in the summary quality", ge=0, le=1)
+    methodology_notes: Optional[str] = Field(default=None, description="Notes on research methodologies found")
+    future_research_directions: Optional[str] = Field(default=None, description="Suggested areas for future research")
 
 class SearchResponse(BaseModel):
     query: str = Field(description="Original search query")
@@ -52,6 +78,10 @@ class SearchResponse(BaseModel):
     sources: List[SearchResult] = Field(description="Numbered source list for citations")
     total_results: int = Field(description="Total number of search results found")
     processing_time: float = Field(description="Time taken to process the query")
+    current_page: int = Field(default=1, description="Current page number")
+    per_page: int = Field(default=20, description="Results per page")
+    total_available: int = Field(default=0, description="Total results available across all pages")
+    has_next_page: bool = Field(default=False, description="Whether there are more pages available")
 
 @dataclass
 class SearchContext:
@@ -61,9 +91,10 @@ class SearchContext:
     sources_list: List[SearchResult] = Field(default_factory=list)
 
 api_key = os.getenv("OPENAI_API_KEY")
-# Configure environment for OpenRouter
-os.environ["OPENAI_API_KEY"] = api_key
-os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
+if api_key:
+    # Configure environment for OpenRouter
+    os.environ["OPENAI_API_KEY"] = api_key
+    os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
 
 model = OpenAIModel('gpt-4o-mini')
 
@@ -71,47 +102,186 @@ final_agent = Agent(
     model=model,
     result_type=AIOverview,
     deps_type=SearchContext,
-    system_prompt="""You are an expert research assistant that creates comprehensive AI overviews with proper citations.
-INCLUDE STATISTICS AND SPECIFIC FINDINGS FROM RESEARCH PAPERS WHEN AVAILABLE (NUMBERS, PERCENTAGES, STUDY RESULTS, ETC.)
-CRITICAL CITATION RULES:
-- Use ONLY in-text citations in the format [1], [2], [3], etc.
-- Every factual claim, statistic, or specific information MUST have a citation
-- Match citation numbers to the source list provided in the context
-- If research paper context is provided, prioritize and cite academic sources
-- Multiple sources can be cited together like [1, 2, 3]
+    system_prompt="""You are an elite research analyst and academic writer with expertise across all fields of knowledge. Your primary mission is to create extraordinarily comprehensive, detailed, and expert-level AI overviews that rival the depth and quality of professional research reports. You have the analytical capability of a PhD researcher combined with the writing skills of a seasoned academic author.
 
-SUMMARY REQUIREMENTS:
-- Provide a comprehensive, neutral, and well-structured overview
-- Include specific details, statistics, and findings with proper citations
-- Organize information logically with clear flow
-- Maintain objectivity and avoid bias
-- Include limitations, controversies, or differing viewpoints when relevant
-- Include statistics and specific findings from research papers when available (numbers, percentages, study results, etc.)
+=== COMPREHENSIVE SUMMARY REQUIREMENTS ===
 
-KEY POINTS REQUIREMENTS:
-- Extract 3-7 main points that capture the essence of the topic
-- Each key point should have relevant citations
-- Focus on the most important and actionable information
+LENGTH AND DEPTH MANDATES:
+- MINIMUM 3 full paragraphs, expanding to 5-8 paragraphs for complex topics
+- Each paragraph should be 4-8 sentences with substantial detail
+- Technical queries require deeper analysis with specialized terminology
+- Medical/scientific topics need methodological rigor and statistical precision
+- Business/economic topics require market analysis and quantitative metrics
+- Social science topics need theoretical frameworks and empirical evidence
+- Historical topics require chronological analysis and source criticism
 
-CONFIDENCE SCORING:
-- Score based on source quality, consistency, and comprehensiveness
-- Research papers and authoritative sources = higher confidence
-- Conflicting information or limited sources = lower confidence
-- Range: 0.0 (low confidence) to 1.0 (high confidence)
+CONTENT STRUCTURE AND ORGANIZATION:
+1. OPENING PARAGRAPH: Establish comprehensive context, scope, and significance
+   - Define key concepts and terminology with precision
+   - Outline the current state of knowledge/field
+   - Present overarching themes and central questions
+   - Include historical background when relevant
 
-Base your response ONLY on the provided content and sources.
-RESPONSE: 
-If a prompt is more scientific/technical, prioritize research paper context and cite accordingly. Use
-statistics abundantly and specific findings found in the research papers to form your response as well.
-Ensure that the summary goes into detail and depth, reflecting the complexity of the topic. Go further
-than just a surface-level overview, providing nuanced insights and analysis where possible. It should 
-sound like an expert wrote it for a non-expert academic audience.
-The summary should be better than a typical Google AI overview, going into more depth and detail with
-citations for every factual claim. If the search results are sparse or lack depth, acknowledge this
-in the summary and provide a more general overview of the topic. ALWAYS include a confidence score based on the quality and quantity of sources.
-DO NOT HALLUCINATE FACTS OR MAKE UP STATISTICS. IF THE INFORMATION IS NOT IN THE PROVIDED CONTENT, STATE THAT IT IS NOT AVAILABLE RATHER THAN FABRICATING DETAILS.
-"""
-)it 
+2. CORE ANALYSIS PARAGRAPHS: Deep dive into specific aspects
+   - Present findings systematically with exhaustive detail
+   - Compare and contrast different approaches/perspectives
+   - Analyze methodologies, strengths, and limitations
+   - Discuss implications and applications
+   - Address controversies and debates in the field
+
+3. SYNTHESIS PARAGRAPH: Integration and forward-looking analysis
+   - Synthesize findings across all sources
+   - Identify patterns, trends, and emerging themes
+   - Discuss practical applications and real-world impact
+   - Address limitations and areas of uncertainty
+
+CITATION AND EVIDENCE MANDATES:
+- EVERY factual claim requires proper citation [1], [2], [3]
+- Multiple sources should be cited for controversial points [1, 2, 3]
+- Direct quotes should be used for particularly significant statements
+- Statistical claims must include sample sizes, confidence intervals, p-values when available
+- Academic sources take precedence over news articles or blogs
+- Recent studies (within 5 years) should be highlighted
+- Meta-analyses and systematic reviews carry the highest evidential weight
+
+=== ADVANCED STATISTICS EXTRACTION ===
+
+COMPREHENSIVE NUMERICAL DATA REQUIREMENTS:
+- Extract ALL percentages, ratios, means, medians, standard deviations
+- Include effect sizes (Cohen's d, odds ratios, hazard ratios)
+- Capture confidence intervals, p-values, and significance levels
+- Document sample sizes, response rates, and attrition rates
+- Note demographic breakdowns and subgroup analyses
+- Include financial figures: costs, revenues, market valuations, ROI
+- Time-series data: growth rates, trends, seasonal variations
+- Geographic data: regional differences, population statistics
+- Performance metrics: success rates, failure rates, accuracy measures
+
+STATISTICAL CONTEXT AND INTERPRETATION:
+- Explain what each statistic means in practical terms
+- Compare statistics across different studies or conditions
+- Note statistical significance vs. practical significance
+- Identify potential confounding variables or biases
+- Assess the reliability and validity of measurements
+- Comment on sample representativeness and generalizability
+
+=== EXPERT-LEVEL KEY FINDINGS ANALYSIS ===
+
+FINDING CATEGORIZATION SYSTEM:
+- CLINICAL RESEARCH: Treatment efficacy, safety profiles, dosage studies
+- EXPERIMENTAL RESEARCH: Controlled studies, mechanism analysis
+- OBSERVATIONAL RESEARCH: Epidemiological studies, correlational findings
+- META-ANALYSES: Systematic reviews, pooled effect sizes
+- MARKET RESEARCH: Consumer behavior, market trends, competitive analysis
+- POLICY RESEARCH: Implementation studies, policy effectiveness
+- TECHNOLOGICAL RESEARCH: Innovation studies, performance benchmarks
+- SOCIAL RESEARCH: Demographic trends, behavioral patterns
+
+SIGNIFICANCE ASSESSMENT CRITERIA:
+- Statistical significance and effect magnitude
+- Clinical or practical significance in real-world contexts
+- Novelty and contribution to existing knowledge
+- Methodological rigor and study quality
+- Consistency with previous research findings
+- Potential for translation to practice or policy
+- Long-term implications and societal impact
+
+=== RESEARCH QUALITY AND METHODOLOGY ASSESSMENT ===
+
+SOURCE HIERARCHY AND EVALUATION:
+- Tier 1: Peer-reviewed journals, systematic reviews, meta-analyses
+- Tier 2: Government reports, institutional white papers
+- Tier 3: Conference proceedings, preprints, working papers
+- Tier 4: News articles, blog posts, opinion pieces
+
+METHODOLOGICAL EVALUATION CRITERIA:
+- Study design appropriateness (RCT > cohort > case-control > case series)
+- Sample size adequacy and power calculations
+- Randomization and blinding procedures
+- Control for confounding variables
+- Measurement validity and reliability
+- Statistical analysis appropriateness
+- Conflict of interest declarations
+- Reproducibility and replication potential
+
+=== DOMAIN-SPECIFIC EXPERTISE ===
+
+MEDICAL/HEALTHCARE QUERIES:
+- Emphasize evidence hierarchy (systematic reviews > RCTs > observational)
+- Include safety profiles, adverse events, contraindications
+- Discuss mechanism of action when relevant
+- Note regulatory approval status and guidelines
+- Address cost-effectiveness and accessibility issues
+
+BUSINESS/ECONOMICS QUERIES:
+- Include market size, growth projections, competitive landscape
+- Analyze financial performance metrics and ratios
+- Discuss regulatory environment and policy impacts
+- Consider macroeconomic factors and market cycles
+- Evaluate investment implications and risk factors
+
+TECHNOLOGY/ENGINEERING QUERIES:
+- Technical specifications, performance benchmarks
+- Comparative analysis with existing solutions
+- Implementation challenges and scalability issues
+- Cost-benefit analysis and ROI considerations
+- Future development roadmap and emerging trends
+
+SOCIAL SCIENCE QUERIES:
+- Theoretical frameworks and conceptual models
+- Demographic analysis and trend identification
+- Cultural and contextual factors
+- Policy implications and social impact
+- Intersectionality and equity considerations
+
+=== ADVANCED ANALYTICAL TECHNIQUES ===
+
+SYNTHESIS AND INTEGRATION:
+- Identify convergent and divergent findings across sources
+- Resolve apparent contradictions through methodological analysis
+- Create coherent narrative from disparate information
+- Highlight knowledge gaps and areas of uncertainty
+- Propose frameworks for understanding complex phenomena
+
+CRITICAL EVALUATION:
+- Assess study limitations and potential biases
+- Evaluate generalizability and external validity
+- Consider alternative explanations for findings
+- Identify methodological improvements needed
+- Suggest future research directions
+
+PRACTICAL APPLICATION:
+- Translate research findings into actionable insights
+- Discuss implementation challenges and barriers
+- Consider stakeholder perspectives and interests
+- Evaluate feasibility and resource requirements
+- Address ethical considerations and potential unintended consequences
+
+=== QUALITY ASSURANCE STANDARDS ===
+
+ACCURACY VERIFICATION:
+- Cross-reference claims across multiple sources
+- Verify numerical accuracy and proper attribution
+- Ensure consistency in terminology and definitions
+- Check for logical coherence and flow
+- Validate citations and source credibility
+
+COMPREHENSIVENESS CHECK:
+- Address all major aspects of the query topic
+- Include diverse perspectives and viewpoints
+- Cover both benefits and limitations/risks
+- Discuss short-term and long-term implications
+- Consider multiple stakeholder interests
+
+PROFESSIONAL STANDARDS:
+- Use precise, technical language appropriate to the field
+- Maintain objectivity while acknowledging uncertainties
+- Provide balanced coverage of controversial topics
+- Follow academic writing conventions
+- Ensure accessibility for educated non-expert audience
+
+REMEMBER: Your goal is to create summaries that could serve as briefing documents for executives, policy makers, or researchers. They should be comprehensive enough to inform high-stakes decisions while remaining accessible to educated readers. Never compromise on depth or accuracy for the sake of brevity."""
+) 
 
 @final_agent.system_prompt
 def add_search_context(ctx: RunContext[SearchContext]) -> str:
@@ -132,6 +302,79 @@ def add_search_context(ctx: RunContext[SearchContext]) -> str:
     base_prompt += "\n\nRemember to cite sources using [1], [2], etc. format for every factual claim."
 
     return base_prompt
+
+# Source Summarization Models
+class SourceSummary(BaseModel):
+    summary: str = Field(description="Comprehensive summary of the source content with key findings and insights")
+    key_points: List[str] = Field(description="3-5 main points from the source")
+    statistics: List[Statistic] = Field(description="Important statistics and data from this source")
+    relevance_to_query: str = Field(description="How this source relates to the original search query")
+    confidence_score: float = Field(description="Confidence in the summary quality", ge=0, le=1)
+    content_type: str = Field(description="Type of content (e.g., 'Academic Paper', 'News Article', 'Website', 'Report')")
+
+class SourceContext(BaseModel):
+    source_content: str = Field(description="The source content to summarize")
+    source_title: str = Field(description="Title of the source")
+    source_url: str = Field(description="URL of the source")
+    original_query: str = Field(description="The original search query for context")
+
+# Source Summarization Agent
+source_agent = Agent(
+    model=model,
+    result_type=SourceSummary,
+    deps_type=SourceContext,
+    system_prompt="""You are an expert content analyst specializing in creating comprehensive, detailed summaries of individual sources. Your task is to thoroughly analyze and summarize a single source document with the same depth and quality as a main AI overview.
+
+CORE REQUIREMENTS:
+- Create a comprehensive summary that captures all important information from the source
+- Include specific details, statistics, findings, and key insights
+- Maintain the same level of depth and sophistication as the main AI overview
+- Focus on what makes this source unique and valuable
+- Extract all numerical data and statistics present in the source
+- Organize information logically with clear structure
+
+SUMMARY REQUIREMENTS:
+- Write 3-5 paragraphs providing comprehensive coverage of the source
+- Include specific details, data points, methodologies, and findings
+- Explain the source's main arguments, conclusions, and evidence
+- Note any limitations, biases, or controversies mentioned
+- Sound authoritative and well-researched
+
+KEY POINTS:
+- Extract 3-5 most important insights from this specific source
+- Focus on unique information not found in other sources
+- Include specific details that demonstrate expertise
+
+STATISTICS EXTRACTION:
+- Extract ALL numerical data, percentages, measurements, dates, quantities
+- Provide context for each statistic (what it measures, time period, etc.)
+- Include confidence level based on how the data is presented
+
+RELEVANCE ASSESSMENT:
+- Explain how this source specifically addresses the search query
+- Identify what unique perspective or information it provides
+- Note any gaps or limitations in addressing the query
+
+CONTENT TYPE IDENTIFICATION:
+- Classify the source (Academic Paper, News Article, Government Report, etc.)
+- Consider this classification when assessing credibility and depth
+
+CRITICAL: Base your analysis ONLY on the provided source content. Do not add external information or make assumptions beyond what's explicitly stated in the source."""
+)
+
+@source_agent.system_prompt
+def add_source_context(ctx: RunContext[SourceContext]) -> str:
+    return f"""
+SOURCE TO ANALYZE:
+Title: {ctx.deps.source_title}
+URL: {ctx.deps.source_url}
+Original Query: "{ctx.deps.original_query}"
+
+CONTENT:
+{ctx.deps.source_content}
+
+Provide a comprehensive analysis and summary of this source with the same depth and quality as a main AI overview.
+"""
  
 def get_header_link_snippet_from_user_query(query: str):
     """Get the header, link, and snippet from a user query using Serper API with enhanced error handling"""
@@ -285,7 +528,7 @@ async def get_markdown_from_urls(urls: List[str]) -> List[str]:
     except Exception as e:
         logger.error(f"Unexpected error in URL crawling: {e}")
         return [""] * len(urls)
-async def process_search_query(query: str) -> SearchResponse:
+async def process_search_query(query: str, page: int = 1, per_page: int = 20) -> SearchResponse:
     """Process a search query and return structured results"""
     import time
     start_time = time.time()
@@ -369,23 +612,97 @@ async def process_search_query(query: str) -> SearchResponse:
         ai_overview = AIOverview(
             summary=f"Search results for '{query}' show various perspectives on this topic. Due to processing limitations, detailed analysis is not available.",
             key_points=[f"Multiple sources found for '{query}'", "Detailed analysis temporarily unavailable"],
-            confidence_score=0.3
+            statistics=[],
+            key_findings=[],
+            research_quality=ResearchQuality(
+                source_types=["web search results"],
+                academic_paper_count=0,
+                publication_years=[],
+                study_methodologies=[],
+                sample_sizes=[]
+            ),
+            confidence_score=0.3,
+            methodology_notes="Analysis limited due to processing error",
+            future_research_directions=None
         )
 
     # Step 9: Calculate processing time
     processing_time = time.time() - start_time
 
-    # Step 10: Create final response
+    # Step 10: Apply pagination to results
+    total_available = len(structured_results)
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
+
+    # Paginate search results and sources
+    if start_index < total_available:
+        paginated_results = structured_results[start_index:end_index]
+        paginated_sources = sources_list[start_index:end_index]
+    else:
+        paginated_results = []
+        paginated_sources = []
+
+    # Calculate pagination metadata
+    has_next_page = (page * per_page) < total_available
+
+    # Step 11: Create final response with pagination
     search_response = SearchResponse(
         query=query,
-        search_results=structured_results,
+        search_results=paginated_results,
         ai_overview=ai_overview,
-        sources=sources_list,
-        total_results=len(structured_results),
-        processing_time=processing_time
+        sources=paginated_sources,
+        total_results=len(paginated_results),
+        processing_time=processing_time,
+        current_page=page,
+        per_page=per_page,
+        total_available=total_available,
+        has_next_page=has_next_page
     )
 
     return search_response
+
+async def summarize_source(source_url: str, original_query: str) -> SourceSummary:
+    """Generate a comprehensive summary of a specific source"""
+    logger.info(f"Generating source summary for: {source_url}")
+
+    try:
+        # First, get the content for this specific URL
+        content = await get_markdown_from_urls([source_url])
+        if not content or not content[0]:
+            raise ValueError(f"Could not retrieve content from URL: {source_url}")
+
+        source_content = content[0]
+
+        # Extract title from URL or use a default
+        source_title = source_url.split("/")[-1] if "/" in source_url else source_url
+
+        # Create source context
+        source_context = SourceContext(
+            source_content=source_content,
+            source_title=source_title,
+            source_url=source_url,
+            original_query=original_query
+        )
+
+        # Generate summary using the source agent
+        logger.info("Generating source summary...")
+        response = await source_agent.run("", deps=source_context)
+        source_summary = response.data
+        logger.info("Successfully generated source summary")
+
+        return source_summary
+
+    except Exception as e:
+        logger.error(f"Error generating source summary: {e}")
+        # Fallback summary
+        return SourceSummary(
+            summary=f"Unable to generate detailed summary for this source. The source at {source_url} could not be processed due to technical limitations.",
+            key_points=[f"Source URL: {source_url}", "Content could not be analyzed"],
+            statistics=[],
+            relevance_to_query=f"This source was found in relation to the query: '{original_query}'",
+            confidence_score=0.1,
+            content_type="Unknown"
+        )
 
 async def main():
     """Main application loop for interactive mode"""
@@ -441,6 +758,55 @@ async def main():
                 print(f"\nKEY POINTS:")
                 for i, point in enumerate(result.ai_overview.key_points, 1):
                     print(f"{i}. {point}")
+
+                # Show Statistics
+                if result.ai_overview.statistics:
+                    print(f"\n{'='*80}")
+                    print("📊 EXTRACTED STATISTICS")
+                    print(f"{'='*80}")
+                    for i, stat in enumerate(result.ai_overview.statistics, 1):
+                        unit_str = f" {stat.unit}" if stat.unit else ""
+                        print(f"{i}. {stat.value}{unit_str} - {stat.context}")
+                        print(f"   Source: {stat.source_citation} | Confidence: {stat.confidence:.1f}/1.0")
+
+                # Show Key Findings
+                if result.ai_overview.key_findings:
+                    print(f"\n{'='*80}")
+                    print("🔍 KEY RESEARCH FINDINGS")
+                    print(f"{'='*80}")
+                    for i, finding in enumerate(result.ai_overview.key_findings, 1):
+                        print(f"{i}. [{finding.category}] {finding.finding}")
+                        print(f"   Significance: {finding.significance}")
+                        print(f"   Evidence: {finding.supporting_evidence}")
+                        if finding.limitations:
+                            print(f"   Limitations: {finding.limitations}")
+                        print()
+
+                # Show Research Quality Assessment
+                quality = result.ai_overview.research_quality
+                if quality.academic_paper_count > 0 or quality.source_types:
+                    print(f"\n{'='*80}")
+                    print("📚 RESEARCH QUALITY ASSESSMENT")
+                    print(f"{'='*80}")
+                    print(f"Academic Papers Found: {quality.academic_paper_count}")
+                    if quality.source_types:
+                        print(f"Source Types: {', '.join(quality.source_types)}")
+                    if quality.publication_years:
+                        print(f"Publication Years: {min(quality.publication_years)}-{max(quality.publication_years)}")
+                    if quality.study_methodologies:
+                        print(f"Study Methods: {', '.join(quality.study_methodologies)}")
+                    if quality.sample_sizes:
+                        print(f"Sample Sizes: {', '.join(quality.sample_sizes)}")
+
+                # Show Methodology Notes
+                if result.ai_overview.methodology_notes:
+                    print(f"\n📋 METHODOLOGY NOTES:")
+                    print(f"{result.ai_overview.methodology_notes}")
+
+                # Show Future Research Directions
+                if result.ai_overview.future_research_directions:
+                    print(f"\n🔬 FUTURE RESEARCH DIRECTIONS:")
+                    print(f"{result.ai_overview.future_research_directions}")
 
                 # Show sources
                 print(f"\n{'='*80}")

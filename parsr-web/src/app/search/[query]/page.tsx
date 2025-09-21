@@ -2,22 +2,40 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Instrument_Serif, Playfair_Display } from 'next/font/google';
+// Times New Roman is a system font, no Google Fonts import needed
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ExternalLink, AlertCircle, X, Eye } from 'lucide-react';
+import { AlertCircle, Eye, Search } from 'lucide-react';
+import GlassIcons from '@/components/GlassIcons';
 import ReactMarkdown from 'react-markdown';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
-const playfair = Instrument_Serif({ weight: "400", subsets: ["latin"] });
+// Times New Roman font family for all text
+const timesNewRoman = "font-['Times_New_Roman',serif]";
+
+// Helper function to convert numbers to Roman numerals
+const toRomanNumeral = (num: number): string => {
+  const values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+  const symbols = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
+  let result = '';
+
+  for (let i = 0; i < values.length; i++) {
+    while (num >= values[i]) {
+      result += symbols[i];
+      num -= values[i];
+    }
+  }
+
+  return result;
+};
+
 
 interface SearchResult {
   title: string;
@@ -26,10 +44,48 @@ interface SearchResult {
   source_number: number;
 }
 
+interface Statistic {
+  value: string | number;
+  unit?: string;
+  context: string;
+  source_citation: string;
+  confidence: number;
+}
+
+interface KeyFinding {
+  finding: string;
+  category: string;
+  significance: string;
+  supporting_evidence: string;
+  limitations?: string;
+}
+
+interface ResearchQuality {
+  source_types: string[];
+  academic_paper_count: number;
+  publication_years: number[];
+  study_methodologies: string[];
+  sample_sizes: string[];
+}
+
 interface AIOverview {
   summary: string;
   key_points: string[];
+  statistics: Statistic[];
+  key_findings: KeyFinding[];
+  research_quality: ResearchQuality;
   confidence_score: number;
+  methodology_notes?: string;
+  future_research_directions?: string;
+}
+
+interface SourceSummary {
+  summary: string;
+  key_points: string[];
+  statistics: Statistic[];
+  relevance_to_query: string;
+  confidence_score: number;
+  content_type: string;
 }
 
 interface SearchResponse {
@@ -39,6 +95,10 @@ interface SearchResponse {
   sources: SearchResult[];
   total_results: number;
   processing_time: number;
+  current_page: number;
+  per_page: number;
+  total_available: number;
+  has_next_page: boolean;
 }
 
 interface TabContent {
@@ -62,14 +122,51 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceTabs, setSourceTabs] = useState<SearchResult[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
+  const [sourceSummaries, setSourceSummaries] = useState<Record<number, SourceSummary | null>>({});
+  const [loadingSummaries, setLoadingSummaries] = useState<Record<number, boolean>>({});
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
+    setCurrentPage(1); // Reset to first page for new search
     router.push(`/search/${encodeURIComponent(searchQuery)}`);
   };
 
-  const openSourceTab = (source: SearchResult) => {
+  const fetchSourceSummary = async (source: SearchResult) => {
+    if (sourceSummaries[source.source_number] || loadingSummaries[source.source_number]) {
+      return; // Already have summary or currently loading
+    }
+
+    setLoadingSummaries(prev => ({ ...prev, [source.source_number]: true }));
+
+    try {
+      const response = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          source_url: source.link,
+          original_query: decodeURIComponent(query)
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch source summary');
+      }
+
+      const summary = await response.json();
+      setSourceSummaries(prev => ({ ...prev, [source.source_number]: summary }));
+    } catch (error) {
+      console.error('Error fetching source summary:', error);
+      setSourceSummaries(prev => ({ ...prev, [source.source_number]: null }));
+    } finally {
+      setLoadingSummaries(prev => ({ ...prev, [source.source_number]: false }));
+    }
+  };
+
+  const openSourceTab = async (source: SearchResult) => {
     // Check if tab is already open
     if (sourceTabs.find(tab => tab.source_number === source.source_number)) {
       setActiveTab(`source-${source.source_number}`);
@@ -79,6 +176,9 @@ export default function SearchPage() {
     // Add new source tab
     setSourceTabs(prev => [...prev, source]);
     setActiveTab(`source-${source.source_number}`);
+
+    // Fetch summary for this source
+    await fetchSourceSummary(source);
   };
 
   useEffect(() => {
@@ -108,7 +208,9 @@ export default function SearchPage() {
           },
           body: JSON.stringify({
             query: decodedQuery,
-            max_results: 10
+            max_results: 20,
+            page: currentPage,
+            per_page: 20
           }),
         });
 
@@ -141,16 +243,35 @@ export default function SearchPage() {
     return () => {
       aborted = true;
     };
+  }, [query, currentPage]);
+
+  // Reset to page 1 when query changes
+  useEffect(() => {
+    setCurrentPage(1);
   }, [query]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="backdrop-blur-sm bg-white/80 border-b border-slate-200/60 sticky top-0 z-50">
         <div className="flex flex-col items-center pt-6 pb-4">
-          <h1 className={`text-slate-800 text-4xl mb-4 font-light tracking-tight ${playfair.className}`}>
-            parsr
-          </h1>
+          <div className="flex items-center gap-4 mb-4">
+            <h1 className={`text-slate-800 text-4xl font-light tracking-tight ${timesNewRoman}`}>
+              parsr
+            </h1>
+            <div className="flex gap-2">
+              <GlassIcons
+                items={[
+                  {
+                    icon: <Search className="w-4 h-4" />,
+                    label: "Search",
+                    color: "blue"
+                  }
+                ]}
+                className="!grid-cols-1 !gap-0 !p-0"
+              />
+            </div>
+          </div>
           <form onSubmit={handleSubmit} className="w-full max-w-2xl flex gap-3 px-4">
             <div className="relative flex-1">
               <Input
@@ -158,28 +279,9 @@ export default function SearchPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`${decodeURIComponent(query)}`}
-                className={`h-12 text-center bg-white/70 border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 ${playfair.className}`}
+                className={`h-12 text-center bg-white/70 border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-stone-500/20 focus:border-stone-400 ${timesNewRoman}`}
               />
             </div>
-            <Button
-              type="submit"
-              className="h-12 w-12 bg-blue-600 hover:bg-blue-700 border-0 shadow-md hover:shadow-lg transition-all duration-200 rounded-xl"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2.5}
-                stroke="currentColor"
-                className="h-5 w-5 text-white"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1116.65 16.65z"
-                />
-              </svg>
-            </Button>
           </form>
         </div>
       </div>
@@ -187,7 +289,7 @@ export default function SearchPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <div className="w-16 h-16 border-4 border-stone-200 border-t-stone-600 rounded-full animate-spin"></div>
             <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-blue-400 rounded-full animate-ping"></div>
           </div>
           <p className="mt-6 text-slate-600 font-medium">Searching the web...</p>
@@ -216,17 +318,17 @@ export default function SearchPage() {
             <div className="h-full border-r border-slate-200/60 bg-white/50 backdrop-blur-sm overflow-y-auto">
               <div className="p-6">
                 <div className="mb-6">
-                  <h2 className="text-xl font-semibold text-slate-800 mb-3">
+                  <h2 className={`text-xl font-semibold text-slate-800 mb-3 ${timesNewRoman}`}>
                     Search Results
                   </h2>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                    <span className={`px-3 py-1.5 bg-stone-100 text-stone-700 rounded-full font-medium ${timesNewRoman}`}>
                       {results.total_results} results
                     </span>
-                    <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full font-medium">
+                    <span className={`px-3 py-1.5 bg-green-100 text-green-700 rounded-full font-medium ${timesNewRoman}`}>
                       {results.processing_time.toFixed(1)}s
                     </span>
-                    <span className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                    <span className={`px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full font-medium ${timesNewRoman}`}>
                       {(results.ai_overview.confidence_score * 100).toFixed(0)}% confidence
                     </span>
                   </div>
@@ -234,10 +336,10 @@ export default function SearchPage() {
 
                 {/* Search Results */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-slate-600 uppercase tracking-wide">Web Results</h3>
+                  <h3 className={`text-sm font-medium text-slate-600 uppercase tracking-wide ${timesNewRoman}`}>Web Results</h3>
                   {results.search_results?.map((result, index) => (
                     <div key={index} className="group relative">
-                      <div className="bg-white rounded-xl border border-slate-200/60 hover:border-blue-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
+                      <div className="bg-white rounded-xl border border-slate-200/60 hover:border-stone-300 hover:shadow-lg transition-all duration-200 overflow-hidden">
                         <a
                           href={result.link}
                           target="_blank"
@@ -245,15 +347,15 @@ export default function SearchPage() {
                           className="block p-4"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                              {result.source_number}
+                            <div className="w-7 h-7 bg-stone-200 rounded-lg flex items-center justify-center text-stone-700 text-xs font-semibold flex-shrink-0">
+                              {toRomanNumeral(result.source_number)}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-slate-900 group-hover:text-blue-600 mb-1 line-clamp-2 transition-colors">
+                              <h4 className={`text-sm font-medium text-slate-900 group-hover:text-stone-600 mb-1 line-clamp-2 transition-colors ${timesNewRoman}`}>
                                 {result.title}
                               </h4>
-                              <p className="text-xs text-emerald-600 mb-2 truncate font-mono">{result.link}</p>
-                              <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{result.snippet}</p>
+                              <p className={`text-xs text-emerald-600 mb-2 truncate ${timesNewRoman}`}>{result.link}</p>
+                              <p className={`text-xs text-slate-600 line-clamp-3 leading-relaxed ${timesNewRoman}`}>{result.snippet}</p>
                             </div>
                           </div>
                         </a>
@@ -261,6 +363,74 @@ export default function SearchPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Pagination Controls */}
+                {results && results.total_available > results.per_page && (
+                  <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-6">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm text-slate-600 ${timesNewRoman}`}>
+                        Page {results.current_page} of {Math.ceil(results.total_available / results.per_page)}
+                      </p>
+                      <span className={`text-xs text-slate-500 ${timesNewRoman}`}>
+                        ({results.total_results} of {results.total_available} results)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Previous Page Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage <= 1 || loading}
+                        className={`${timesNewRoman} text-xs px-3 py-1.5`}
+                      >
+                        Previous
+                      </Button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, Math.ceil(results.total_available / results.per_page)) }, (_, i) => {
+                          const totalPages = Math.ceil(results.total_available / results.per_page);
+                          let startPage = Math.max(1, currentPage - 2);
+                          let endPage = Math.min(totalPages, startPage + 4);
+
+                          if (endPage - startPage < 4) {
+                            startPage = Math.max(1, endPage - 4);
+                          }
+
+                          const pageNum = startPage + i;
+                          if (pageNum <= totalPages) {
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={pageNum === currentPage ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(pageNum)}
+                                disabled={loading}
+                                className={`${timesNewRoman} text-xs px-2 py-1.5 min-w-[32px]`}
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+
+                      {/* Next Page Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={!results.has_next_page || loading}
+                        className={`${timesNewRoman} text-xs px-3 py-1.5`}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </ResizablePanel>
@@ -268,36 +438,41 @@ export default function SearchPage() {
           <ResizablePanel defaultSize={60}>
             <div className="h-full overflow-y-auto bg-white/30 backdrop-blur-sm">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-                <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-md border-b border-slate-200/60">
-                  <div className="flex items-center gap-1 p-2 overflow-x-auto scrollbar-hide">
+                <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-slate-100">
+                  <div className="flex items-center gap-0 p-1 overflow-x-auto scrollbar-hide">
                     <button
                       onClick={() => setActiveTab("overview")}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      className={`relative px-4 py-3 text-sm font-medium transition-all duration-300 whitespace-nowrap ${timesNewRoman} ${
                         activeTab === "overview"
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
-                          : "bg-white/70 text-slate-600 hover:bg-white hover:text-blue-600 border border-slate-200"
+                          ? "text-slate-900"
+                          : "text-slate-500 hover:text-slate-700"
                       }`}
                     >
-                      <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
                       AI Overview
+                      {activeTab === "overview" && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 rounded-full"></div>
+                      )}
                     </button>
                     {sourceTabs.map((source) => (
-                      <div key={source.source_number} className="flex items-center gap-1">
+                      <div key={source.source_number} className="flex items-center group">
                         <button
                           onClick={() => setActiveTab(`source-${source.source_number}`)}
-                          className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 max-w-[160px] ${
+                          className={`relative flex items-center gap-2 px-3 py-3 text-sm font-medium transition-all duration-300 max-w-[140px] ${timesNewRoman} ${
                             activeTab === `source-${source.source_number}`
-                              ? "bg-slate-800 text-white shadow-lg"
-                              : "bg-white/70 text-slate-600 hover:bg-white hover:text-slate-800 border border-slate-200"
+                              ? "text-slate-900"
+                              : "text-slate-500 hover:text-slate-700"
                           }`}
                           title={source.title}
                         >
-                          <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-blue-600 rounded text-white text-xs flex items-center justify-center font-semibold">
-                            {source.source_number}
-                          </div>
-                          <span className="truncate">
-                            {source.title.length > 12 ? `${source.title.substring(0, 12)}...` : source.title}
+                          <span className="text-xs text-slate-400 font-normal">
+                            {toRomanNumeral(source.source_number)}
                           </span>
+                          <span className="truncate">
+                            {source.title.length > 10 ? `${source.title.substring(0, 10)}...` : source.title}
+                          </span>
+                          {activeTab === `source-${source.source_number}` && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900 rounded-full"></div>
+                          )}
                         </button>
                         <button
                           onClick={(e) => {
@@ -307,7 +482,7 @@ export default function SearchPage() {
                               setActiveTab("overview");
                             }
                           }}
-                          className="w-6 h-6 rounded-full bg-slate-200 hover:bg-red-100 text-slate-500 hover:text-red-600 transition-colors flex items-center justify-center text-sm"
+                          className="ml-1 w-4 h-4 rounded-full text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center text-xs opacity-0 group-hover:opacity-100"
                         >
                           ×
                         </button>
@@ -318,18 +493,18 @@ export default function SearchPage() {
 
                 <TabsContent value="overview" className="p-6 space-y-6 h-full overflow-y-auto">
                   {/* AI Overview */}
-                  <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 rounded-2xl border border-blue-200/60 overflow-hidden shadow-sm">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+                  <div className="bg-stone-50 rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
+                    <div className="bg-white border-b border-stone-200 p-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                          <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center">
+                            <svg className="w-6 h-6 text-stone-600" fill="currentColor" viewBox="0 0 24 24">
                               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                             </svg>
                           </div>
-                          <h3 className="text-xl font-semibold">AI Overview</h3>
+                          <h3 className={`text-xl font-semibold text-stone-800 ${timesNewRoman}`}>AI Overview</h3>
                         </div>
-                        <div className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
+                        <div className="px-3 py-1 bg-stone-100 rounded-full text-sm font-medium text-stone-700">
                           {(results.ai_overview.confidence_score * 100).toFixed(0)}% confidence
                         </div>
                       </div>
@@ -337,7 +512,7 @@ export default function SearchPage() {
 
                     <div className="p-6">
                       <div className="prose prose-slate max-w-none">
-                        <div className="text-slate-700 leading-relaxed text-[15px] font-light">
+                        <div className={`text-slate-700 leading-relaxed text-[15px] font-light ${timesNewRoman}`}>
                           <ReactMarkdown
                             components={{
                               p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
@@ -349,19 +524,20 @@ export default function SearchPage() {
                         </div>
                       </div>
 
+
                       {results.ai_overview.key_points && results.ai_overview.key_points.length > 0 && (
-                        <div className="mt-6 pt-6 border-t border-blue-100">
-                          <h4 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                            <div className="w-1.5 h-6 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
+                        <div className="mt-6 pt-6 border-t border-stone-100">
+                          <h4 className={`font-semibold text-slate-800 mb-4 flex items-center gap-2 ${timesNewRoman}`}>
+                            <div className="w-1.5 h-6 bg-stone-600 rounded-full"></div>
                             Key Insights
                           </h4>
                           <div className="space-y-3">
                             {results.ai_overview.key_points.map((point, index) => (
                               <div key={index} className="flex items-start gap-3 p-3 bg-white/70 rounded-xl border border-slate-100">
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
-                                  {index + 1}
+                                <div className="w-6 h-6 bg-stone-600 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
+                                  {toRomanNumeral(index + 1)}
                                 </div>
-                                <div className="text-slate-700 text-sm leading-relaxed">
+                                <div className={`text-slate-700 text-sm leading-relaxed ${timesNewRoman}`}>
                                   <ReactMarkdown
                                     components={{
                                       p: ({ children }) => <p className="mb-0">{children}</p>,
@@ -379,8 +555,8 @@ export default function SearchPage() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-slate-50 via-white to-gray-50 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
-                <div className="bg-gradient-to-r from-slate-700 to-gray-800 text-white p-6">
+                  <div className="bg-stone-50 rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
+                <div className="bg-stone-700 text-white p-6">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -388,8 +564,8 @@ export default function SearchPage() {
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold">Sources</h3>
-                      <p className="text-white/70 text-sm">Referenced sources with citation numbers</p>
+                      <h3 className={`text-xl font-semibold ${timesNewRoman}`}>Sources</h3>
+                      <p className={`text-white/70 text-sm ${timesNewRoman}`}>Referenced sources with citation numbers</p>
                     </div>
                   </div>
                 </div>
@@ -397,21 +573,21 @@ export default function SearchPage() {
                   <div className="space-y-4">
                     {results.sources?.map((source) => (
                       <div key={source.source_number} className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 hover:border-slate-200 transition-all duration-200 hover:shadow-md group">
-                        <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-gray-700 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                          {source.source_number}
+                        <div className="w-8 h-8 bg-stone-600 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                          {toRomanNumeral(source.source_number)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-slate-800 mb-2 line-clamp-2 group-hover:text-slate-900">
+                          <h4 className={`text-sm font-semibold text-slate-800 mb-2 line-clamp-2 group-hover:text-slate-900 ${timesNewRoman}`}>
                             {source.title}
                           </h4>
-                          <p className="text-xs text-slate-600 mb-3 line-clamp-2 leading-relaxed">
+                          <p className={`text-xs text-slate-600 mb-3 line-clamp-2 leading-relaxed ${timesNewRoman}`}>
                             {source.snippet}
                           </p>
                           <a
                             href={source.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-slate-500 hover:text-blue-600 transition-colors duration-200 truncate block"
+                            className={`text-xs text-slate-500 hover:text-stone-600 transition-colors duration-200 truncate block ${timesNewRoman}`}
                           >
                             {source.link}
                           </a>
@@ -441,7 +617,7 @@ export default function SearchPage() {
                     <CardTitle className="flex items-center gap-2">
                       📄 Source Summary
                       <Badge variant="outline">
-                        Source #{source.source_number}
+                        Source {toRomanNumeral(source.source_number)}
                       </Badge>
                     </CardTitle>
                     <CardDescription>
@@ -449,45 +625,120 @@ export default function SearchPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose max-w-none">
-                          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                            <p className="text-sm text-yellow-800">
-                              <strong>Note:</strong> This is a placeholder for the source summary content that will be provided by the API.
+                    <div className={`prose max-w-none ${timesNewRoman}`}>
+                      {loadingSummaries[source.source_number] ? (
+                        <div className="flex flex-col items-center justify-center py-8">
+                          <div className="w-8 h-8 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin mb-4"></div>
+                          <p className={`text-slate-600 ${timesNewRoman}`}>Generating comprehensive summary...</p>
+                        </div>
+                      ) : sourceSummaries[source.source_number] ? (
+                        <div>
+                          {/* Content Type and Confidence */}
+                          <div className="flex items-center justify-between mb-4 p-3 bg-stone-50 rounded-lg">
+                            <span className={`text-sm font-medium text-stone-700 ${timesNewRoman}`}>
+                              📄 {sourceSummaries[source.source_number]?.content_type}
+                            </span>
+                            <span className={`text-xs text-stone-600 ${timesNewRoman}`}>
+                              {Math.round((sourceSummaries[source.source_number]?.confidence_score || 0) * 100)}% confidence
+                            </span>
+                          </div>
+
+                          {/* Main Summary */}
+                          <div className="mb-6">
+                            <h3 className={`text-lg font-semibold text-slate-800 mb-3 ${timesNewRoman}`}>Summary</h3>
+                            <div className={`text-slate-700 leading-relaxed ${timesNewRoman}`}>
+                              <ReactMarkdown
+                                components={{
+                                  p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+                                  strong: ({ children }) => <strong className="font-semibold text-slate-800">{children}</strong>
+                                }}
+                              >
+                                {sourceSummaries[source.source_number]?.summary || ""}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+
+                          {/* Key Points */}
+                          {sourceSummaries[source.source_number]?.key_points && sourceSummaries[source.source_number]?.key_points.length > 0 && (
+                            <div className="mb-6">
+                              <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${timesNewRoman}`}>
+                                <div className="w-1.5 h-6 bg-stone-600 rounded-full"></div>
+                                Key Points
+                              </h4>
+                              <div className="space-y-3">
+                                {sourceSummaries[source.source_number]?.key_points.map((point, index) => (
+                                  <div key={index} className="flex items-start gap-3 p-3 bg-stone-50 rounded-xl">
+                                    <div className="w-6 h-6 bg-stone-600 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5">
+                                      {toRomanNumeral(index + 1)}
+                                    </div>
+                                    <div className={`text-slate-700 text-sm leading-relaxed ${timesNewRoman}`}>
+                                      <ReactMarkdown
+                                        components={{
+                                          p: ({ children }) => <p className="mb-0">{children}</p>,
+                                          strong: ({ children }) => <strong className="font-semibold text-slate-800">{children}</strong>
+                                        }}
+                                      >
+                                        {point}
+                                      </ReactMarkdown>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Statistics */}
+                          {sourceSummaries[source.source_number]?.statistics && sourceSummaries[source.source_number]?.statistics.length > 0 && (
+                            <div className="mb-6">
+                              <h4 className={`font-semibold text-slate-800 mb-3 flex items-center gap-2 ${timesNewRoman}`}>
+                                <div className="w-1.5 h-6 bg-emerald-600 rounded-full"></div>
+                                Statistics from Source
+                              </h4>
+                              <div className="grid grid-cols-1 gap-3">
+                                {sourceSummaries[source.source_number]?.statistics.map((stat, index) => (
+                                  <div key={index} className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="text-xl font-bold text-emerald-800">
+                                        {stat.value}{stat.unit && <span className="text-base">{stat.unit}</span>}
+                                      </div>
+                                      <span className={`text-xs text-emerald-600 ${timesNewRoman}`}>{stat.source_citation}</span>
+                                    </div>
+                                    <p className={`text-sm text-emerald-700 leading-relaxed ${timesNewRoman}`}>{stat.context}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Relevance */}
+                          <div className="mb-6">
+                            <h4 className={`font-semibold text-slate-800 mb-3 ${timesNewRoman}`}>Relevance to Query</h4>
+                            <p className={`text-slate-700 text-sm leading-relaxed ${timesNewRoman}`}>
+                              {sourceSummaries[source.source_number]?.relevance_to_query}
                             </p>
                           </div>
-                          <div className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-semibold mb-2">Source Summary for: {source.title}</h3>
-                            <p className="mb-4">This will contain the detailed source summary and analysis from the API.</p>
-                            <p className="mb-2"><strong>URL:</strong> {source.link}</p>
-                            <p><strong>Snippet:</strong> {source.snippet}</p>
-                          </div>
-                          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                            <h4 className="font-semibold text-blue-900 mb-2">Related Links:</h4>
-                            <ul className="space-y-1">
-                              <li>
-                                <a href="#" className="text-blue-600 hover:underline text-sm">
-                                  📌 Link to related content (placeholder)
-                                </a>
-                              </li>
-                              <li>
-                                <a href="#" className="text-blue-600 hover:underline text-sm">
-                                  📌 Another related link (placeholder)
-                                </a>
-                              </li>
-                              <li>
-                                <a
-                                  href={source.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline text-sm"
-                                >
-                                  🔗 View Original Source
-                                </a>
-                              </li>
-                            </ul>
+
+                          {/* Source Link */}
+                          <div className="p-4 bg-stone-50 rounded-lg">
+                            <a
+                              href={source.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`text-stone-600 hover:text-stone-800 hover:underline text-sm transition-colors ${timesNewRoman}`}
+                            >
+                              🔗 View Original Source
+                            </a>
                           </div>
                         </div>
-                      </CardContent>
+                      ) : (
+                        <div className="bg-red-50 border-l-4 border-red-400 p-4">
+                          <p className={`text-sm text-red-800 ${timesNewRoman}`}>
+                            <strong>Error:</strong> Could not generate summary for this source. Please try again later.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
                     </Card>
                   </TabsContent>
             ))}
