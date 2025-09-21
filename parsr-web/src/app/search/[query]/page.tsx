@@ -251,9 +251,22 @@ export default function SearchPage() {
   }, [query]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen">
+      {/* Mesh Gradient Background */}
+      <div className="absolute inset-0 -z-10">
+        <div className="fixed inset-0 w-full h-full -z-10">
+          {/* Base gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#f5e0c3] via-[#f7d9b6] to-[#fff6eb]"></div>
+
+          <div className="absolute top-[20%] left-[15%] w-[400px] h-[400px] bg-gradient-radial from-[#f9dec9] to-transparent rounded-full blur-3xl animate-float-1"></div>
+          <div className="absolute top-[60%] right-[20%] w-[350px] h-[350px] bg-gradient-radial from-[#f7d9b6]/90 to-transparent rounded-full blur-3xl animate-float-2"></div>
+          <div className="absolute top-[40%] left-[50%] w-[300px] h-[300px] bg-gradient-radial from-[#f5e0c3]/80 to-transparent rounded-full blur-2xl animate-float-3"></div>
+          <div className="absolute bottom-[10%] left-[10%] w-[250px] h-[250px] bg-gradient-radial from-[#fff6eb]/85 to-transparent rounded-full blur-2xl animate-float-4"></div>
+          <div className="absolute top-[10%] right-[10%] w-[200px] h-[200px] bg-gradient-radial from-[#f9dec9]/75 to-transparent rounded-full blur-xl animate-float-5"></div>
+        </div>
+      </div>
       {/* Header */}
-      <div className="backdrop-blur-sm bg-white/80 border-b border-slate-200/60 sticky top-0 z-50">
+      <div className="backdrop-blur-sm border-b border-slate-200/60 sticky top-0 z-50">
         <div className="flex flex-col items-center pt-6 pb-4">
           <div className="flex items-center gap-4 mb-4">
             <h1 className={`text-slate-800 text-4xl font-light tracking-tight ${timesNewRoman}`}>
@@ -315,7 +328,7 @@ export default function SearchPage() {
           className="h-[calc(100vh-200px)]"
         >
           <ResizablePanel defaultSize={40} minSize={30} maxSize={60}>
-            <div className="h-full border-r border-slate-200/60 bg-white/50 backdrop-blur-sm overflow-y-auto">
+            <div className="h-full border-r border-slate-200/60 backdrop-blur-sm overflow-y-auto">
               <div className="p-6">
                 <div className="mb-6">
                   <h2 className={`text-xl font-semibold text-slate-800 mb-3 ${timesNewRoman}`}>
@@ -436,7 +449,7 @@ export default function SearchPage() {
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={60}>
-            <div className="h-full overflow-y-auto bg-white/30 backdrop-blur-sm">
+            <div className="h-full overflow-y-auto backdrop-blur-sm">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
                 <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-slate-100">
                   <div className="flex items-center gap-0 p-1 overflow-x-auto scrollbar-hide">
