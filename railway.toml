@@ -1,5 +1,5 @@
 [build]
-builder = "dockerfile"
+builder = "RAILPACK"
 
 [deploy]
 startCommand = "cd llm_stuff && python search_api.py"
