@@ -1,0 +1,26 @@
+# Minimal dependencies for Railway deployment
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# Essential utilities
+requests>=2.31.0
+python-dotenv>=1.0.0
+httpx>=0.25.0
+
+# AI and LLM
+openai>=1.0.0
+
+# Vector Database
+qdrant-client>=1.7.0
+
+# Web Crawling (lightweight)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Type hints
+typing-extensions>=4.8.0
+
+# Security
+certifi>=2023.7.22
+urllib3>=2.0.7
