@@ -1,8 +1,8 @@
 [phases.setup]
 nixPkgs = [
-  "python39",
-  "python39Packages.pip",
-  "python39Packages.setuptools",
+  "python311",
+  "python311Packages.pip",
+  "python311Packages.setuptools",
   "gcc",
   "gfortran",
   "pkg-config",
