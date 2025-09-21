@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Playfair_Display } from 'next/font/google';
+import { Instrument_Serif, Playfair_Display } from 'next/font/google';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +15,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-const playfair = Playfair_Display({ subsets: ["latin"] });
+const playfair = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
 interface SearchResult {
   title: string;

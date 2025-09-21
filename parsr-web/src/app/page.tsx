@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Playfair_Display } from "next/font/google";
+import { Instrument_Serif, Playfair_Display } from "next/font/google";
 import { Input } from "@/components/ui/input"; 
 import { Button } from "@/components/ui/button"; 
 
-const playfair = Playfair_Display({ subsets: ["latin"] });
+const playfair = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 export default function LandingPage() {
   const [query, setQuery] = useState("");
