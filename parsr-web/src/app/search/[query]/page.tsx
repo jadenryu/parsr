@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ExternalLink, AlertCircle } from 'lucide-react';
+import { Loader2, ExternalLink, AlertCircle, X, Eye } from 'lucide-react';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const playfair = Instrument_Serif({ weight: "400", subsets: ["latin"] });
 
@@ -39,6 +40,13 @@ interface SearchResponse {
   processing_time: number;
 }
 
+interface TabContent {
+  id: string;
+  title: string;
+  source: SearchResult;
+  content: string;
+}
+
 export default function SearchPage() {
   const params = useParams();
   const router = useRouter();
@@ -48,11 +56,25 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sourceTabs, setSourceTabs] = useState<SearchResult[]>([]);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     router.push(`/search/${encodeURIComponent(searchQuery)}`);
+  };
+
+  const openSourceTab = (source: SearchResult) => {
+    // Check if tab is already open
+    if (sourceTabs.find(tab => tab.source_number === source.source_number)) {
+      setActiveTab(`source-${source.source_number}`);
+      return;
+    }
+
+    // Add new source tab
+    setSourceTabs(prev => [...prev, source]);
+    setActiveTab(`source-${source.source_number}`);
   };
 
   useEffect(() => {
@@ -208,9 +230,34 @@ export default function SearchPage() {
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={60}>
-            <div className="h-full overflow-y-auto p-4">
-              {/* AI Overview */}
-              <Card className="mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="h-full overflow-y-auto">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+                <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${1 + sourceTabs.length}, 1fr)` }}>
+                  <TabsTrigger value="overview">🤖 AI Overview</TabsTrigger>
+                  {sourceTabs.map((source) => (
+                    <TabsTrigger key={source.source_number} value={`source-${source.source_number}`} className="relative group">
+                      <span className="truncate max-w-[120px]" title={source.title}>
+                        {source.title.length > 15 ? `${source.title.substring(0, 15)}...` : source.title}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSourceTabs(prev => prev.filter(tab => tab.source_number !== source.source_number));
+                          if (activeTab === `source-${source.source_number}`) {
+                            setActiveTab("overview");
+                          }
+                        }}
+                        className="ml-2 text-gray-400 hover:text-gray-600"
+                      >
+                        ×
+                      </button>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                <TabsContent value="overview" className="p-4 h-full overflow-y-auto">
+                  {/* AI Overview */}
+                  <Card className="mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                 <CardHeader>
                   <CardTitle className="text-blue-900 flex items-center gap-2">
                     🤖 AI Overview
@@ -244,7 +291,7 @@ export default function SearchPage() {
               <Card className="mb-6">
                 <CardHeader>
                   <CardTitle className="text-lg">📚 Sources</CardTitle>
-                  <CardDescription>Referenced sources with citation numbers</CardDescription>
+                  <CardDescription>Referenced sources with citation numbers. Click "View Source Summary" to open detailed analysis in a new tab.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -263,12 +310,82 @@ export default function SearchPage() {
                             {source.title}
                           </a>
                           <p className="text-xs text-gray-600 mt-1">{source.link}</p>
+                          <Button
+                            onClick={() => openSourceTab(source)}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 h-7 text-xs"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View Source Summary
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
+                </TabsContent>
+
+                {/* Source Tabs */}
+                {sourceTabs.map((source) => (
+                  <TabsContent key={source.source_number} value={`source-${source.source_number}`} className="p-4 h-full overflow-y-auto">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          📄 Source Summary
+                          <Badge variant="outline">
+                            Source #{source.source_number}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription>
+                          {source.link}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="prose max-w-none">
+                          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                            <p className="text-sm text-yellow-800">
+                              <strong>Note:</strong> This is a placeholder for the source summary content that will be provided by the API.
+                            </p>
+                          </div>
+                          <div className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-lg">
+                            <h3 className="font-semibold mb-2">Source Summary for: {source.title}</h3>
+                            <p className="mb-4">This will contain the detailed source summary and analysis from the API.</p>
+                            <p className="mb-2"><strong>URL:</strong> {source.link}</p>
+                            <p><strong>Snippet:</strong> {source.snippet}</p>
+                          </div>
+                          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                            <h4 className="font-semibold text-blue-900 mb-2">Related Links:</h4>
+                            <ul className="space-y-1">
+                              <li>
+                                <a href="#" className="text-blue-600 hover:underline text-sm">
+                                  📌 Link to related content (placeholder)
+                                </a>
+                              </li>
+                              <li>
+                                <a href="#" className="text-blue-600 hover:underline text-sm">
+                                  📌 Another related link (placeholder)
+                                </a>
+                              </li>
+                              <li>
+                                <a
+                                  href={source.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline text-sm"
+                                >
+                                  🔗 View Original Source
+                                </a>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                ))}
+              </Tabs>
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

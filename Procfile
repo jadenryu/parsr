@@ -1,1 +1,1 @@
-web: cd llm_stuff && python3 search_api.py
+web: python3 llm_stuff/search_api.py

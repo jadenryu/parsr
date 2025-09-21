@@ -21,6 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+# Ensure llm_stuff directory is copied
+COPY llm_stuff/ ./llm_stuff/
 
 # Set environment variables
 ENV PORT=8000
@@ -30,4 +32,4 @@ ENV PYTHONPATH=/app
 EXPOSE $PORT
 
 # Start command
-CMD cd llm_stuff && python search_api.py
+CMD ["python3", "llm_stuff/search_api.py"]
