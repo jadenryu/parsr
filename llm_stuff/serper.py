@@ -104,16 +104,70 @@ final_agent = Agent(
     deps_type=SearchContext,
     system_prompt="""You are an elite research analyst and academic writer with expertise across all fields of knowledge. Your primary mission is to create extraordinarily comprehensive, detailed, and expert-level AI overviews that rival the depth and quality of professional research reports. You have the analytical capability of a PhD researcher combined with the writing skills of a seasoned academic author.
 
+CRITICAL TEMPORAL CONTEXT:
+- The current year is 2025 (September 21, 2025 specifically)
+- When discussing future predictions, projections, or timeline estimates from sources, always contextualize them relative to 2025
+- If sources mention projections for "2023" or "2024", note that these dates have already passed
+- Use present-day perspective: "As of 2025..." or "By 2025, these projections have..."
+
+=== CRITICAL ANALYTICAL FRAMEWORK ===
+
+MANDATORY ANALYTICAL QUESTIONS TO ADDRESS (when applicable):
+Before writing, systematically ask yourself these questions about the topic and address them in your summary:
+
+1. HISTORICAL CONTEXT & DEVELOPMENT:
+   - What is the historical background and evolution of this topic?
+   - How has understanding/perception of this topic changed over time?
+   - What were the key milestones, discoveries, or turning points?
+
+2. CURRENT STATE & MECHANISMS:
+   - What is the current state of knowledge/implementation/understanding?
+   - How does this topic work? What are the underlying mechanisms or processes?
+   - What are the different approaches, methods, or schools of thought?
+
+3. FUTURE TRAJECTORY & IMPLICATIONS:
+   - Where is this field/topic heading? What are the emerging trends?
+   - What are the long-term implications and potential consequences?
+   - What future developments or breakthroughs are anticipated?
+
+4. MULTI-PERSPECTIVE ANALYSIS:
+   - What are the different viewpoints, debates, or controversies?
+   - What are the advantages, benefits, or positive aspects?
+   - What are the disadvantages, risks, or negative aspects?
+   - Who are the key stakeholders and what are their perspectives?
+
+5. LIMITATIONS & CONSTRAINTS:
+   - What are the current limitations, challenges, or barriers?
+   - What doesn't work well or what are the failure modes?
+   - What are the resource, technical, or practical constraints?
+   - What questions remain unanswered or poorly understood?
+
+6. BROADER IMPLICATIONS & CONNECTIONS:
+   - How does this topic connect to other fields or areas of knowledge?
+   - What are the societal, economic, environmental, or ethical implications?
+   - What are the policy, regulatory, or governance considerations?
+   - How does this impact different communities or populations?
+
+7. REAL-WORLD IMPACT & STATISTICAL EVIDENCE:
+   - What concrete, measurable impacts does this topic have in the real world?
+   - What statistical data demonstrates the scope, scale, or significance of this topic?
+   - What quantitative evidence shows growth, adoption, effectiveness, or impact?
+   - What numerical data illustrates trends, patterns, or outcomes?
+
+NOTE: Apply these questions intelligently - not all topics require all dimensions. For example, "apples" wouldn't need extensive limitation analysis, but "artificial intelligence" would benefit from all dimensions.
+
 === COMPREHENSIVE SUMMARY REQUIREMENTS ===
 
 LENGTH AND DEPTH MANDATES:
-- MINIMUM 3 full paragraphs, expanding to 5-8 paragraphs for complex topics
-- Each paragraph should be 4-8 sentences with substantial detail
+- ABSOLUTE MINIMUM: 3 full paragraphs, each containing 5-8 detailed sentences
+- TARGET LENGTH: 4-6 paragraphs for most topics, expanding to 6-10 paragraphs for complex subjects
+- Each paragraph must be substantive with deep analysis, not superficial coverage
 - Technical queries require deeper analysis with specialized terminology
 - Medical/scientific topics need methodological rigor and statistical precision
 - Business/economic topics require market analysis and quantitative metrics
 - Social science topics need theoretical frameworks and empirical evidence
 - Historical topics require chronological analysis and source criticism
+- BE VERBOSE AND THOROUGH - err on the side of too much detail rather than too little
 
 CONTENT STRUCTURE AND ORGANIZATION:
 1. OPENING PARAGRAPH: Establish comprehensive context, scope, and significance
@@ -136,13 +190,27 @@ CONTENT STRUCTURE AND ORGANIZATION:
    - Address limitations and areas of uncertainty
 
 CITATION AND EVIDENCE MANDATES:
-- EVERY factual claim requires proper citation [1], [2], [3]
-- Multiple sources should be cited for controversial points [1, 2, 3]
-- Direct quotes should be used for particularly significant statements
-- Statistical claims must include sample sizes, confidence intervals, p-values when available
-- Academic sources take precedence over news articles or blogs
-- Recent studies (within 5 years) should be highlighted
-- Meta-analyses and systematic reviews carry the highest evidential weight
+- EVERY factual claim MUST be grounded in the provided sources with proper citation [1], [2], [3]
+- NEVER make claims that cannot be supported by the provided source content
+- Multiple sources should be cited for controversial points using format [1, 2, 3] (NOT [1], [2], [3])
+- Direct quotes should be used for particularly significant statements from sources
+- All content must be traceable back to the provided sources - do not add external knowledge
+- When paraphrasing source content, maintain accuracy and provide citation
+
+MANDATORY CITATION FORMAT RULES:
+- Single source: [1]
+- Multiple sources: [1, 2, 3] or [2, 4, 7] (comma-separated within single brackets)
+- NEVER use separate brackets like [1], [2], [3] - this is INCORRECT
+- ALWAYS group multiple citations in one set of brackets
+
+MANDATORY STATISTICS REQUIREMENTS:
+- EVERY summary MUST include AT LEAST ONE concrete statistic or numerical data point
+- Scientific/technical queries MUST include MULTIPLE statistics (minimum 3-5 statistical points)
+- Statistics must be extracted from the provided sources, not external knowledge
+- Include percentages, growth rates, market sizes, adoption rates, research findings, etc.
+- Present statistics with proper context and source attribution
+- For queries lacking statistical data in sources, explicitly note this limitation
+- FAILURE TO INCLUDE STATISTICS = FAILED ASSIGNMENT
 
 === ADVANCED STATISTICS EXTRACTION ===
 
@@ -280,7 +348,29 @@ PROFESSIONAL STANDARDS:
 - Follow academic writing conventions
 - Ensure accessibility for educated non-expert audience
 
-REMEMBER: Your goal is to create summaries that could serve as briefing documents for executives, policy makers, or researchers. They should be comprehensive enough to inform high-stakes decisions while remaining accessible to educated readers. Never compromise on depth or accuracy for the sake of brevity."""
+REMEMBER: Your goal is to create summaries that could serve as briefing documents for executives, policy makers, or researchers. They should be comprehensive enough to inform high-stakes decisions while remaining accessible to educated readers. Never compromise on depth or accuracy for the sake of brevity.
+
+FINAL VERBOSITY MANDATE:
+- If your summary is less than 3 substantial paragraphs, you have failed the assignment
+- Each paragraph must contain at least 5-8 detailed sentences with rich content
+- Think of this as writing a comprehensive brief, not a quick summary
+- Use the analytical framework above to ensure you're covering all relevant dimensions
+- Be thorough, detailed, and expansive in your analysis - the user wants depth, not brevity
+- When in doubt, add more detail, context, and analysis rather than cutting content short
+
+CRITICAL SUCCESS CRITERIA (ALL MUST BE MET):
+✓ MINIMUM 3 paragraphs, each with 5-8 sentences
+✓ AT LEAST ONE statistic included (multiple for scientific topics)
+✓ ALL claims backed by provided sources with [1], [2], [3] citations
+✓ Content directly derived from source material, not external knowledge
+✓ Addresses historical context, current state, future implications, and real-world impact
+✓ Includes proper source attribution for all factual statements
+
+FAILURE CONDITIONS:
+✗ No statistics included = FAILED
+✗ Claims not supported by sources = FAILED
+✗ Less than 3 substantial paragraphs = FAILED
+✗ Missing proper citations = FAILED"""
 ) 
 
 @final_agent.system_prompt
@@ -395,7 +485,7 @@ def get_header_link_snippet_from_user_query(query: str):
 
         queries = query.split()
         total_query = "+".join(queries)
-        url = f"https://google.serper.dev/search?q={total_query}&apiKey={serper_api_key}"
+        url = f"https://google.serper.dev/search?q={total_query}&num=20&apiKey={serper_api_key}"
 
         # Add timeout and retry logic
         response = requests.get(url, timeout=30)
@@ -460,7 +550,33 @@ async def get_markdown_from_urls(urls: List[str]) -> List[str]:
     try:
         browser_config = BrowserConfig(
             browser_mode="builtin",
-            headless=True
+            headless=True,
+            # Anti-bot detection headers and stealth mode
+            extra_args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-features=VizDisplayCompositor",
+                "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "--accept-language=en-US,en;q=0.9",
+                "--accept-encoding=gzip, deflate, br",
+                "--accept=text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+                "--disable-web-security",
+                "--disable-features=TranslateUI",
+                "--disable-ipc-flooding-protection",
+                "--disable-renderer-backgrounding",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-client-side-phishing-detection",
+                "--disable-sync",
+                "--disable-default-apps",
+                "--hide-scrollbars",
+                "--mute-audio",
+                "--no-first-run",
+                "--disable-extensions",
+                "--disable-plugins",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-gpu"
+            ]
         )
 
         async def fetch_single_url(crawler, url: str, index: int) -> str:
@@ -471,11 +587,53 @@ async def get_markdown_from_urls(urls: List[str]) -> List[str]:
 
                 logger.debug(f"Crawling URL {index + 1}/{len(urls)}: {url[:50]}...")
 
-                # Add timeout for individual requests
-                result = await asyncio.wait_for(
-                    crawler.arun(url=url),
-                    timeout=30.0  # 30 second timeout per URL
-                )
+                # Enhanced crawling with retry logic and stealth settings
+                max_retries = 1  # Reduced from 2 to 1 for faster performance
+                for attempt in range(max_retries + 1):
+                    try:
+                        # Add delay between attempts to avoid rate limiting
+                        if attempt > 0:
+                            await asyncio.sleep(1 * attempt)
+                            logger.debug(f"Retry attempt {attempt} for URL {index + 1}: {url[:50]}...")
+
+                        # Use more conservative crawling settings for better success rate
+                        result = await asyncio.wait_for(
+                            crawler.arun(
+                                url=url,
+                                wait_for="domcontentloaded",  # Don't wait for full load
+                                delay_before_return_html=1000,  # Reduced from 2s to 1s for faster performance
+                                bypass_cache=True,
+                                simulate_user=True,  # Simulate human-like behavior
+                                override_navigator=True  # Override navigator properties for stealth
+                            ),
+                            timeout=15.0  # Reduced from 30s to 15s for faster performance
+                        )
+
+                        # If successful, break out of retry loop
+                        if result.success:
+                            break
+                        elif attempt < max_retries:
+                            logger.warning(f"Attempt {attempt + 1} failed for URL {index + 1}: {url[:50]}... - Retrying")
+                            continue
+                        else:
+                            logger.warning(f"All {max_retries + 1} attempts failed for URL {index + 1}: {url[:50]}...")
+                            return ""
+
+                    except asyncio.TimeoutError:
+                        if attempt < max_retries:
+                            logger.warning(f"Timeout on attempt {attempt + 1} for URL {index + 1}: {url[:50]}... - Retrying")
+                            continue
+                        else:
+                            logger.error(f"Final timeout for URL {index + 1}: {url[:50]}...")
+                            return ""
+
+                    except Exception as e:
+                        if attempt < max_retries:
+                            logger.debug(f"Error on attempt {attempt + 1} for URL {index + 1}: {e} - Retrying")
+                            continue
+                        else:
+                            logger.debug(f"Final error for URL {index + 1}: {e}")
+                            return ""
 
                 content = result.markdown if result.markdown else ""
 
@@ -497,8 +655,8 @@ async def get_markdown_from_urls(urls: List[str]) -> List[str]:
 
         try:
             async with AsyncWebCrawler(config=browser_config) as crawler:
-                # Process URLs with controlled concurrency
-                semaphore = asyncio.Semaphore(3)  # Limit to 3 concurrent requests
+                # Process URLs with controlled concurrency - increased for better performance
+                semaphore = asyncio.Semaphore(5)  # Increased from 2 to 5 concurrent requests for faster crawling
 
                 async def limited_fetch(url: str, index: int) -> str:
                     async with semaphore:
