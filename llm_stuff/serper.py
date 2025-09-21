@@ -61,6 +61,10 @@ class SearchContext:
     sources_list: List[SearchResult] = Field(default_factory=list)
 
 api_key = os.getenv("OPENAI_API_KEY")
+# Configure environment for OpenRouter
+os.environ["OPENAI_API_KEY"] = api_key
+os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
+
 model = OpenAIModel('gpt-4o-mini')
 
 final_agent = Agent(
@@ -68,7 +72,7 @@ final_agent = Agent(
     result_type=AIOverview,
     deps_type=SearchContext,
     system_prompt="""You are an expert research assistant that creates comprehensive AI overviews with proper citations.
-
+INCLUDE STATISTICS AND SPECIFIC FINDINGS FROM RESEARCH PAPERS WHEN AVAILABLE (NUMBERS, PERCENTAGES, STUDY RESULTS, ETC.)
 CRITICAL CITATION RULES:
 - Use ONLY in-text citations in the format [1], [2], [3], etc.
 - Every factual claim, statistic, or specific information MUST have a citation
@@ -82,6 +86,7 @@ SUMMARY REQUIREMENTS:
 - Organize information logically with clear flow
 - Maintain objectivity and avoid bias
 - Include limitations, controversies, or differing viewpoints when relevant
+- Include statistics and specific findings from research papers when available (numbers, percentages, study results, etc.)
 
 KEY POINTS REQUIREMENTS:
 - Extract 3-7 main points that capture the essence of the topic
@@ -94,8 +99,19 @@ CONFIDENCE SCORING:
 - Conflicting information or limited sources = lower confidence
 - Range: 0.0 (low confidence) to 1.0 (high confidence)
 
-Base your response ONLY on the provided content and sources."""
-)
+Base your response ONLY on the provided content and sources.
+RESPONSE: 
+If a prompt is more scientific/technical, prioritize research paper context and cite accordingly. Use
+statistics abundantly and specific findings found in the research papers to form your response as well.
+Ensure that the summary goes into detail and depth, reflecting the complexity of the topic. Go further
+than just a surface-level overview, providing nuanced insights and analysis where possible. It should 
+sound like an expert wrote it for a non-expert academic audience.
+The summary should be better than a typical Google AI overview, going into more depth and detail with
+citations for every factual claim. If the search results are sparse or lack depth, acknowledge this
+in the summary and provide a more general overview of the topic. ALWAYS include a confidence score based on the quality and quantity of sources.
+DO NOT HALLUCINATE FACTS OR MAKE UP STATISTICS. IF THE INFORMATION IS NOT IN THE PROVIDED CONTENT, STATE THAT IT IS NOT AVAILABLE RATHER THAN FABRICATING DETAILS.
+"""
+)it 
 
 @final_agent.system_prompt
 def add_search_context(ctx: RunContext[SearchContext]) -> str:
