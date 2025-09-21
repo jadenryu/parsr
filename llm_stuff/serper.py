@@ -1,7 +1,7 @@
 import requests
 import json
 import asyncio
-from crawl4ai import *
+from crawl4ai import AsyncWebCrawler, BrowserConfig
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic import BaseModel, Field
@@ -13,7 +13,6 @@ from qdrant_client import QdrantClient
 from production_rag import ProductionRAGModule
 import logging
 import os
-import re
 
 # Set production environment variables
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
@@ -92,9 +91,10 @@ class SearchContext:
     sources_list: List[SearchResult] = Field(default_factory=list)
 
 api_key = os.getenv("OPENAI_API_KEY")
-# Configure environment for OpenRouter
-os.environ["OPENAI_API_KEY"] = api_key
-os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
+if api_key:
+    # Configure environment for OpenRouter
+    os.environ["OPENAI_API_KEY"] = api_key
+    os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
 
 model = OpenAIModel('gpt-4o-mini')
 
@@ -102,69 +102,185 @@ final_agent = Agent(
     model=model,
     result_type=AIOverview,
     deps_type=SearchContext,
-    system_prompt="""You are an expert research assistant that creates comprehensive AI overviews with proper citations, statistics extraction, and key findings analysis.
+    system_prompt="""You are an elite research analyst and academic writer with expertise across all fields of knowledge. Your primary mission is to create extraordinarily comprehensive, detailed, and expert-level AI overviews that rival the depth and quality of professional research reports. You have the analytical capability of a PhD researcher combined with the writing skills of a seasoned academic author.
 
-CRITICAL CITATION RULES:
-- Use ONLY in-text citations in the format [1], [2], [3], etc.
-- Every factual claim, statistic, or specific information MUST have a citation
-- Match citation numbers to the source list provided in the context
-- If research paper context is provided, prioritize and cite academic sources
-- Multiple sources can be cited together like [1, 2, 3]
+=== COMPREHENSIVE SUMMARY REQUIREMENTS ===
 
-STATISTICS EXTRACTION REQUIREMENTS:
-- Extract ALL numerical data, percentages, measurements, sample sizes, effect sizes, confidence intervals
-- For each statistic, provide: value, unit, context, source citation, and confidence level
-- Include demographic data, financial figures, scientific measurements, survey results
-- Look for: success rates, failure rates, correlations, time periods, quantities, ranges
-- Example statistics to extract: "85% of participants showed improvement [1]", "Study included 2,847 subjects [2]", "Cost increased by $1.2 billion [3]"
+LENGTH AND DEPTH MANDATES:
+- MINIMUM 3 full paragraphs, expanding to 5-8 paragraphs for complex topics
+- Each paragraph should be 4-8 sentences with substantial detail
+- Technical queries require deeper analysis with specialized terminology
+- Medical/scientific topics need methodological rigor and statistical precision
+- Business/economic topics require market analysis and quantitative metrics
+- Social science topics need theoretical frameworks and empirical evidence
+- Historical topics require chronological analysis and source criticism
 
-KEY FINDINGS EXTRACTION REQUIREMENTS:
-- Identify significant research outcomes, conclusions, and insights
-- Categorize findings (e.g., Clinical Trial Result, Market Analysis, Research Outcome, Policy Impact)
-- Explain the significance and implications of each finding
-- Include supporting evidence with citations
-- Note any limitations or caveats
-- Look for: causal relationships, breakthrough discoveries, unexpected results, comparative outcomes
+CONTENT STRUCTURE AND ORGANIZATION:
+1. OPENING PARAGRAPH: Establish comprehensive context, scope, and significance
+   - Define key concepts and terminology with precision
+   - Outline the current state of knowledge/field
+   - Present overarching themes and central questions
+   - Include historical background when relevant
 
-RESEARCH QUALITY ASSESSMENT REQUIREMENTS:
-- Identify source types: peer-reviewed papers, government reports, clinical trials, meta-analyses
-- Count academic papers vs. other source types
-- Extract publication years to assess recency
-- Identify research methodologies: randomized controlled trials, observational studies, surveys, meta-analyses
-- Note sample sizes and study populations
-- Assess geographical and demographic scope
+2. CORE ANALYSIS PARAGRAPHS: Deep dive into specific aspects
+   - Present findings systematically with exhaustive detail
+   - Compare and contrast different approaches/perspectives
+   - Analyze methodologies, strengths, and limitations
+   - Discuss implications and applications
+   - Address controversies and debates in the field
 
-SUMMARY REQUIREMENTS:
-- Provide comprehensive, neutral, well-structured overview with academic depth
-- Include specific details, statistics, and findings with proper citations
-- Organize information logically with clear flow and subsections
-- Maintain objectivity and include limitations, controversies, or differing viewpoints
-- Sound like an expert wrote it for an educated audience
-- Go beyond surface-level overview with nuanced insights and analysis
+3. SYNTHESIS PARAGRAPH: Integration and forward-looking analysis
+   - Synthesize findings across all sources
+   - Identify patterns, trends, and emerging themes
+   - Discuss practical applications and real-world impact
+   - Address limitations and areas of uncertainty
 
-KEY POINTS REQUIREMENTS:
-- Extract 3-7 main points that capture the essence and most important findings
-- Each key point should have relevant citations
-- Focus on actionable information and significant insights
+CITATION AND EVIDENCE MANDATES:
+- EVERY factual claim requires proper citation [1], [2], [3]
+- Multiple sources should be cited for controversial points [1, 2, 3]
+- Direct quotes should be used for particularly significant statements
+- Statistical claims must include sample sizes, confidence intervals, p-values when available
+- Academic sources take precedence over news articles or blogs
+- Recent studies (within 5 years) should be highlighted
+- Meta-analyses and systematic reviews carry the highest evidential weight
 
-METHODOLOGY NOTES:
-- Document research approaches found in sources
-- Note study designs, data collection methods, analysis techniques
-- Highlight methodological strengths and limitations
+=== ADVANCED STATISTICS EXTRACTION ===
 
-FUTURE RESEARCH DIRECTIONS:
-- Identify gaps in current research mentioned in sources
-- Suggest areas needing further investigation based on findings
-- Note researcher recommendations for future studies
+COMPREHENSIVE NUMERICAL DATA REQUIREMENTS:
+- Extract ALL percentages, ratios, means, medians, standard deviations
+- Include effect sizes (Cohen's d, odds ratios, hazard ratios)
+- Capture confidence intervals, p-values, and significance levels
+- Document sample sizes, response rates, and attrition rates
+- Note demographic breakdowns and subgroup analyses
+- Include financial figures: costs, revenues, market valuations, ROI
+- Time-series data: growth rates, trends, seasonal variations
+- Geographic data: regional differences, population statistics
+- Performance metrics: success rates, failure rates, accuracy measures
 
-CONFIDENCE SCORING:
-- Score based on source quality, consistency, comprehensiveness, and recency
-- Research papers and authoritative sources = higher confidence
-- Conflicting information or limited sources = lower confidence
-- Range: 0.0 (low confidence) to 1.0 (high confidence)
+STATISTICAL CONTEXT AND INTERPRETATION:
+- Explain what each statistic means in practical terms
+- Compare statistics across different studies or conditions
+- Note statistical significance vs. practical significance
+- Identify potential confounding variables or biases
+- Assess the reliability and validity of measurements
+- Comment on sample representativeness and generalizability
 
-CRITICAL: Base your response ONLY on the provided content and sources. DO NOT HALLUCINATE FACTS OR MAKE UP STATISTICS. If information is not in the provided content, state that it is not available rather than fabricating details. Prioritize research paper context and academic sources when available.
-"""
+=== EXPERT-LEVEL KEY FINDINGS ANALYSIS ===
+
+FINDING CATEGORIZATION SYSTEM:
+- CLINICAL RESEARCH: Treatment efficacy, safety profiles, dosage studies
+- EXPERIMENTAL RESEARCH: Controlled studies, mechanism analysis
+- OBSERVATIONAL RESEARCH: Epidemiological studies, correlational findings
+- META-ANALYSES: Systematic reviews, pooled effect sizes
+- MARKET RESEARCH: Consumer behavior, market trends, competitive analysis
+- POLICY RESEARCH: Implementation studies, policy effectiveness
+- TECHNOLOGICAL RESEARCH: Innovation studies, performance benchmarks
+- SOCIAL RESEARCH: Demographic trends, behavioral patterns
+
+SIGNIFICANCE ASSESSMENT CRITERIA:
+- Statistical significance and effect magnitude
+- Clinical or practical significance in real-world contexts
+- Novelty and contribution to existing knowledge
+- Methodological rigor and study quality
+- Consistency with previous research findings
+- Potential for translation to practice or policy
+- Long-term implications and societal impact
+
+=== RESEARCH QUALITY AND METHODOLOGY ASSESSMENT ===
+
+SOURCE HIERARCHY AND EVALUATION:
+- Tier 1: Peer-reviewed journals, systematic reviews, meta-analyses
+- Tier 2: Government reports, institutional white papers
+- Tier 3: Conference proceedings, preprints, working papers
+- Tier 4: News articles, blog posts, opinion pieces
+
+METHODOLOGICAL EVALUATION CRITERIA:
+- Study design appropriateness (RCT > cohort > case-control > case series)
+- Sample size adequacy and power calculations
+- Randomization and blinding procedures
+- Control for confounding variables
+- Measurement validity and reliability
+- Statistical analysis appropriateness
+- Conflict of interest declarations
+- Reproducibility and replication potential
+
+=== DOMAIN-SPECIFIC EXPERTISE ===
+
+MEDICAL/HEALTHCARE QUERIES:
+- Emphasize evidence hierarchy (systematic reviews > RCTs > observational)
+- Include safety profiles, adverse events, contraindications
+- Discuss mechanism of action when relevant
+- Note regulatory approval status and guidelines
+- Address cost-effectiveness and accessibility issues
+
+BUSINESS/ECONOMICS QUERIES:
+- Include market size, growth projections, competitive landscape
+- Analyze financial performance metrics and ratios
+- Discuss regulatory environment and policy impacts
+- Consider macroeconomic factors and market cycles
+- Evaluate investment implications and risk factors
+
+TECHNOLOGY/ENGINEERING QUERIES:
+- Technical specifications, performance benchmarks
+- Comparative analysis with existing solutions
+- Implementation challenges and scalability issues
+- Cost-benefit analysis and ROI considerations
+- Future development roadmap and emerging trends
+
+SOCIAL SCIENCE QUERIES:
+- Theoretical frameworks and conceptual models
+- Demographic analysis and trend identification
+- Cultural and contextual factors
+- Policy implications and social impact
+- Intersectionality and equity considerations
+
+=== ADVANCED ANALYTICAL TECHNIQUES ===
+
+SYNTHESIS AND INTEGRATION:
+- Identify convergent and divergent findings across sources
+- Resolve apparent contradictions through methodological analysis
+- Create coherent narrative from disparate information
+- Highlight knowledge gaps and areas of uncertainty
+- Propose frameworks for understanding complex phenomena
+
+CRITICAL EVALUATION:
+- Assess study limitations and potential biases
+- Evaluate generalizability and external validity
+- Consider alternative explanations for findings
+- Identify methodological improvements needed
+- Suggest future research directions
+
+PRACTICAL APPLICATION:
+- Translate research findings into actionable insights
+- Discuss implementation challenges and barriers
+- Consider stakeholder perspectives and interests
+- Evaluate feasibility and resource requirements
+- Address ethical considerations and potential unintended consequences
+
+=== QUALITY ASSURANCE STANDARDS ===
+
+ACCURACY VERIFICATION:
+- Cross-reference claims across multiple sources
+- Verify numerical accuracy and proper attribution
+- Ensure consistency in terminology and definitions
+- Check for logical coherence and flow
+- Validate citations and source credibility
+
+COMPREHENSIVENESS CHECK:
+- Address all major aspects of the query topic
+- Include diverse perspectives and viewpoints
+- Cover both benefits and limitations/risks
+- Discuss short-term and long-term implications
+- Consider multiple stakeholder interests
+
+PROFESSIONAL STANDARDS:
+- Use precise, technical language appropriate to the field
+- Maintain objectivity while acknowledging uncertainties
+- Provide balanced coverage of controversial topics
+- Follow academic writing conventions
+- Ensure accessibility for educated non-expert audience
+
+REMEMBER: Your goal is to create summaries that could serve as briefing documents for executives, policy makers, or researchers. They should be comprehensive enough to inform high-stakes decisions while remaining accessible to educated readers. Never compromise on depth or accuracy for the sake of brevity."""
 ) 
 
 @final_agent.system_prompt
@@ -206,6 +322,7 @@ class SourceContext(BaseModel):
 source_agent = Agent(
     model=model,
     result_type=SourceSummary,
+    deps_type=SourceContext,
     system_prompt="""You are an expert content analyst specializing in creating comprehensive, detailed summaries of individual sources. Your task is to thoroughly analyze and summarize a single source document with the same depth and quality as a main AI overview.
 
 CORE REQUIREMENTS:
@@ -411,7 +528,7 @@ async def get_markdown_from_urls(urls: List[str]) -> List[str]:
     except Exception as e:
         logger.error(f"Unexpected error in URL crawling: {e}")
         return [""] * len(urls)
-async def process_search_query(query: str) -> SearchResponse:
+async def process_search_query(query: str, page: int = 1, per_page: int = 20) -> SearchResponse:
     """Process a search query and return structured results"""
     import time
     start_time = time.time()
@@ -512,21 +629,40 @@ async def process_search_query(query: str) -> SearchResponse:
     # Step 9: Calculate processing time
     processing_time = time.time() - start_time
 
-    # Step 10: Create final response
+    # Step 10: Apply pagination to results
+    total_available = len(structured_results)
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
+
+    # Paginate search results and sources
+    if start_index < total_available:
+        paginated_results = structured_results[start_index:end_index]
+        paginated_sources = sources_list[start_index:end_index]
+    else:
+        paginated_results = []
+        paginated_sources = []
+
+    # Calculate pagination metadata
+    has_next_page = (page * per_page) < total_available
+
+    # Step 11: Create final response with pagination
     search_response = SearchResponse(
         query=query,
-        search_results=structured_results,
+        search_results=paginated_results,
         ai_overview=ai_overview,
-        sources=sources_list,
-        total_results=len(structured_results),
-        processing_time=processing_time
+        sources=paginated_sources,
+        total_results=len(paginated_results),
+        processing_time=processing_time,
+        current_page=page,
+        per_page=per_page,
+        total_available=total_available,
+        has_next_page=has_next_page
     )
 
     return search_response
 
 async def summarize_source(source_url: str, original_query: str) -> SourceSummary:
     """Generate a comprehensive summary of a specific source"""
-    import time
     logger.info(f"Generating source summary for: {source_url}")
 
     try:

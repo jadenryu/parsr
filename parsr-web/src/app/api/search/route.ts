@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { query, max_results = 10 } = body;
+    const { query, max_results = 20, page = 1, per_page = 20 } = body;
 
     if (!query) {
       return NextResponse.json(
@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         query,
-        max_results
+        max_results,
+        page,
+        per_page
       }),
       cache: 'no-store',
     });

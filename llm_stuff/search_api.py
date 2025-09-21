@@ -93,39 +93,16 @@ async def search(request: SearchRequest):
                 detail="Query must be at least 2 characters long"
             )
 
-        logger.info(f"Processing search query: {request.query}")
+        logger.info(f"Processing search query: {request.query} (page {request.page}/{request.per_page} per page)")
 
-        # Process the search query
-        result = await process_search_query(request.query)
+        # Process the search query with pagination parameters
+        result = await process_search_query(
+            query=request.query,
+            page=request.page or 1,
+            per_page=request.per_page or 20
+        )
 
-        # Calculate pagination
-        page = request.page or 1
-        per_page = request.per_page or 20
-        max_results = request.max_results or per_page
-
-        # Calculate offset for pagination
-        start_index = (page - 1) * per_page
-        end_index = start_index + min(per_page, max_results)
-
-        # Apply pagination to results
-        total_available = len(result.search_results)
-        if start_index < total_available:
-            result.search_results = result.search_results[start_index:end_index]
-            result.sources = result.sources[start_index:end_index]
-            result.total_results = len(result.search_results)
-        else:
-            # Page beyond available results
-            result.search_results = []
-            result.sources = []
-            result.total_results = 0
-
-        # Set pagination metadata
-        result.current_page = page
-        result.per_page = per_page
-        result.total_available = total_available
-        result.has_next_page = (page * per_page) < total_available
-
-        logger.info(f"Successfully processed search query: {request.query}")
+        logger.info(f"Successfully processed search query: {request.query} - {result.total_results} results on page {result.current_page}")
         return result
 
     except ValueError as e:
