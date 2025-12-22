@@ -1,4 +1,4 @@
-# Parsr 🔍
+# Parsr
 
 <div align="center">
   <img src="parsr.png" alt="Parsr Logo" width="200"/>
@@ -14,18 +14,18 @@
 
 ---
 
-## 🌟 Features
+## Features
 
-- **🤖 AI-Powered Overviews**: Get intelligent summaries with inline citations [1], [2], [3]
-- **🔍 Enhanced Search Results**: Google-style search results with titles, snippets, and links
-- **📚 Research Paper Detection**: Automatically identifies and prioritizes academic sources
-- **🧠 RAG Integration**: Leverages Qdrant vector database for semantic search
-- **⚡ Real-Time Processing**: Fast, asynchronous search processing
-- **🎨 Modern UI**: Beautiful Next.js frontend with responsive design
-- **📊 Source Summaries**: On-demand detailed summaries for any search result
-- **🌐 RESTful API**: Clean, documented API for easy integration
+- **AI-Powered Overviews**: Get intelligent summaries with inline citations [1], [2], [3]
+- **Enhanced Search Results**: Google-style search results with titles, snippets, and links
+- **Research Paper Detection**: Automatically identifies and prioritizes academic sources
+- **RAG Integration**: Leverages Qdrant vector database for semantic search
+- **Real-Time Processing**: Fast, asynchronous search processing
+- **Modern UI**: Beautiful Next.js frontend with responsive design
+- **Source Summaries**: On-demand detailed summaries for any search result
+- **RESTful API**: Clean, documented API for easy integration
 
-## 🏗️ Architecture
+## Architecture
 
 ### Backend (Python)
 - **FastAPI**: High-performance API framework
@@ -47,7 +47,7 @@
 - **Database**: Qdrant Cloud
 - **Top-K Retrieval**: Configurable semantic search depth
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -125,80 +125,7 @@
    
    Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## 📡 API Documentation
-
-### Core Endpoints
-
-#### `POST /search`
-Perform an AI-enhanced search query.
-
-**Request Body:**
-```json
-{
-  "query": "machine learning transformers",
-  "max_results": 20,
-  "page": 1,
-  "per_page": 20
-}
-```
-
-**Response:**
-```json
-{
-  "search_results": [...],
-  "ai_overview": "Transformers are a type of neural network...[1][2]",
-  "sources": [
-    {
-      "number": 1,
-      "title": "Attention Is All You Need",
-      "link": "https://arxiv.org/abs/1706.03762",
-      "snippet": "..."
-    }
-  ],
-  "total_results": 15,
-  "processing_time": 2.34,
-  "has_next_page": false,
-  "has_previous_page": false
-}
-```
-
-#### `POST /summarize-source`
-Get a detailed summary of a specific source.
-
-**Request Body:**
-```json
-{
-  "source_url": "https://example.com/article",
-  "original_query": "machine learning"
-}
-```
-
-**Response:**
-```json
-{
-  "url": "https://example.com/article",
-  "summary": "Detailed summary...",
-  "key_points": ["Point 1", "Point 2"],
-  "relevance_score": 0.95
-}
-```
-
-#### `GET /health`
-Check system health status.
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "message": "System is operational",
-  "system_health": {
-    "qdrant": "connected",
-    "model": "loaded"
-  }
-}
-```
-
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -220,58 +147,7 @@ Check system health status.
 |----------|-------------|---------|
 | `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:8000` |
 
-## 🚢 Deployment
-
-### Backend Deployment (Railway)
-
-1. Fork this repository
-2. Connect to Railway
-3. Configure environment variables in Railway dashboard
-4. Deploy from `main` branch
-
-See [Railway Configuration](railway.toml) for deployment settings.
-
-### Frontend Deployment (Vercel)
-
-1. Connect your repository to Vercel
-2. Set root directory to `parsr-web`
-3. Configure `NEXT_PUBLIC_API_URL` environment variable
-4. Deploy
-
-See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) and [VERCEL_SETUP.md](VERCEL_SETUP.md) for detailed instructions.
-
-### Docker Deployment
-
-```bash
-docker build -t parsr-backend .
-docker run -p 8000:8000 --env-file .env parsr-backend
-```
-
-## 🛠️ Tech Stack
-
-### Backend
-- **FastAPI** - Modern Python web framework
-- **Pydantic AI** - AI agent framework
-- **Sentence Transformers** - Text embeddings
-- **Qdrant** - Vector database
-- **Crawl4AI** - Web crawling
-- **HTTPX** - Async HTTP client
-- **Logfire** - Observability
-
-### Frontend
-- **Next.js 15** - React framework
-- **React 19** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **Radix UI** - Components
-- **Lucide React** - Icons
-
-### AI & ML
-- **OpenAI/OpenRouter** - LLM inference
-- **all-MiniLM-L6-v2** - Embedding model
-- **Qdrant** - Vector similarity search
-
-## 📂 Project Structure
+## Project Structure
 
 ```
 parsr/
@@ -293,46 +169,9 @@ parsr/
 └── README.md               # This file
 ```
 
-## 🧪 Testing
-
-### Backend Tests
-```bash
-# Run specific test modules
-python llm_stuff/test_rag.py
-python llm_stuff/test_comprehensive_agent.py
-python llm_stuff/test_pagination.py
-```
-
-### Frontend Tests
-```bash
-cd parsr-web
-npm run lint
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
+## License
 
 This project is open source and available under the [MIT License](LICENSE).
-
-## 🙏 Acknowledgments
-
-- Built with [FastAPI](https://fastapi.tiangolo.com/)
-- Powered by [Qdrant](https://qdrant.tech/)
-- UI components from [Radix UI](https://www.radix-ui.com/)
-- Embeddings from [Sentence Transformers](https://www.sbert.net/)
-
-## 📧 Support
-
-For issues and questions, please open an issue on the [GitHub repository](https://github.com/jadenryu/parsr/issues).
 
 ---
 
