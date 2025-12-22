@@ -18,12 +18,10 @@
 
 - **AI-Powered Overviews**: Get intelligent summaries with inline citations [1], [2], [3]
 - **Enhanced Search Results**: Google-style search results with titles, snippets, and links
-- **Research Paper Detection**: Automatically identifies and prioritizes academic sources
+- **Reputable Source Detection**: Automatically identifies and prioritizes academic sources
 - **RAG Integration**: Leverages Qdrant vector database for semantic search
 - **Real-Time Processing**: Fast, asynchronous search processing
-- **Modern UI**: Beautiful Next.js frontend with responsive design
 - **Source Summaries**: On-demand detailed summaries for any search result
-- **RESTful API**: Clean, documented API for easy integration
 
 ## Architecture
 
